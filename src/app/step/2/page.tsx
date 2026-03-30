@@ -1,133 +1,197 @@
 "use client";
 
-import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { lookupLead, trackFunnelStep } from "@/app/actions";
+
 export default function Step2() {
-  // No stage change here — lead is still in Fase 1: Captación (watching VSL)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [ready, setReady] = useState(false);
+
+  // Support ?ref=email to enter directly (skip Step 1)
+  // Track stage: entering Step 2 = confirmar_cita (48hr_qual_conf)
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+
+    if (ref) {
+      // Direct entry via link — lookup lead and store data
+      localStorage.setItem("af_lead_email", ref);
+      lookupLead(ref).then((res) => {
+        if (res.ok && res.userId) {
+          localStorage.setItem("af_owner_id", res.userId);
+        }
+        // Track: lead entered video/booking step
+        trackFunnelStep(ref, "confirmar_cita");
+        setReady(true);
+      });
+    } else {
+      // Normal flow from Step 1 — data already in localStorage
+      const email = localStorage.getItem("af_lead_email");
+      if (email) trackFunnelStep(email, "confirmar_cita");
+      setReady(true);
+    }
+  }, [searchParams]);
+
+  if (!ready) {
+    return (
+      <main
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "#0a1628" }}
+      >
+        <div className="w-6 h-6 border-2 border-white/20 border-t-[#c9a84c] rounded-full animate-spin" />
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col">
-      {/* Header / Logo */}
-      <header className="flex justify-center py-6">
-        <div className="flex items-center gap-2 text-xl font-bold">
-          <span className="text-yellow-500 text-2xl">⭐</span>
-          <span>
-            EMPRENDEDOR<span className="font-light">DIGITAL</span>
-          </span>
-        </div>
+    <main className="min-h-screen flex flex-col relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(135deg, #0a1628 0%, #0e1f3d 40%, #132a4a 70%, #0a1628 100%)",
+          }}
+        />
+      </div>
+
+      {/* Header */}
+      <header className="relative z-10 flex items-center justify-center py-5 px-6">
+        <img
+          src="https://www.incruises.com/images/incruises_logo.png"
+          alt="inCruises"
+          className="h-8 md:h-10 object-contain brightness-0 invert opacity-90"
+        />
       </header>
 
       {/* Content */}
-      <section className="flex-1 flex flex-col items-center px-4 pb-16">
-        <div className="max-w-3xl w-full text-center">
-          {/* Headline */}
-          <h1 className="text-2xl md:text-4xl font-bold leading-tight mb-8">
-            Descubre Cómo Estamos Ayudando A Personas Como TÚ, A Ganar $10,000*
-            USD Mensuales Convirtiéndote En Un Vendedor Digital Certificado En
-            Tan Solo 60 Días
-          </h1>
-
-          {/* PASO 1 Badge */}
-          <div className="inline-block bg-red-600 text-white font-bold text-sm md:text-base px-6 py-2 rounded mb-6">
-            PASO 1: MIRA EL VIDEO
+      <section className="relative z-10 flex-1 flex flex-col items-center px-5 md:px-8 pb-10">
+        <div className="w-full max-w-3xl">
+          {/* Step badge */}
+          <div className="text-center mb-5">
+            <div
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold tracking-[0.12em] uppercase mb-4"
+              style={{
+                background: "rgba(201, 168, 76, 0.12)",
+                border: "1px solid rgba(201, 168, 76, 0.25)",
+                color: "#c9a84c",
+              }}
+            >
+              Paso 1: Mirá el Video
+            </div>
+            <h1 className="text-xl md:text-3xl font-bold text-white leading-tight">
+              Descubrí Cómo Miles De Personas Viajan En{" "}
+              <span style={{ color: "#c9a84c" }}>Cruceros De Lujo</span>{" "}
+              Y Generan Ingresos
+            </h1>
           </div>
 
-          {/* Video Embed */}
-          <div className="relative w-full aspect-video bg-gray-900 rounded-lg overflow-hidden mb-8">
-            {/* Placeholder - reemplazar con el video real */}
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-              <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/30 transition">
-                <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-white border-b-[12px] border-b-transparent ml-1" />
-              </div>
+          {/* Video */}
+          <div
+            className="relative w-full aspect-video rounded-xl overflow-hidden mb-8"
+            style={{
+              border: "1px solid rgba(255,255,255,0.1)",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+            }}
+          >
+            {/* Replace with real video iframe */}
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#0e1f3d] to-[#0a1628]">
+              <button className="group flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full transition-all duration-300 cursor-pointer"
+                style={{
+                  background: "rgba(201, 168, 76, 0.15)",
+                  border: "2px solid rgba(201, 168, 76, 0.4)",
+                }}
+              >
+                <div className="w-0 h-0 border-t-[10px] border-t-transparent border-l-[18px] border-b-[10px] border-b-transparent ml-1 transition-all"
+                  style={{ borderLeftColor: "#c9a84c" }}
+                />
+              </button>
             </div>
-            {/* Para usar un iframe de YouTube/Vimeo, reemplazar el div anterior con:
+            {/* Para video real:
             <iframe
-              src="URL_DEL_VIDEO"
+              src="https://www.youtube.com/embed/VIDEO_ID"
               className="absolute inset-0 w-full h-full"
-              allow="autoplay; fullscreen"
+              allow="autoplay; fullscreen; encrypted-media"
               allowFullScreen
             /> */}
           </div>
 
-          {/* PASO 2 Badge */}
-          <div className="inline-block bg-red-600 text-white font-bold text-sm md:text-base px-6 py-2 rounded mb-6">
-            PASO 2: APLICA AHORA
-          </div>
+          {/* CTA */}
+          <div className="text-center">
+            <div
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold tracking-[0.12em] uppercase mb-5"
+              style={{
+                background: "rgba(201, 168, 76, 0.12)",
+                border: "1px solid rgba(201, 168, 76, 0.25)",
+                color: "#c9a84c",
+              }}
+            >
+              Paso 2: Agendá Tu Llamada
+            </div>
 
-          {/* CTA Button */}
-          <Link
-            href="/step/3"
-            className="block max-w-2xl mx-auto bg-red-600 hover:bg-red-700 transition rounded-lg py-5 px-8 text-center"
-          >
-            <span className="text-xl md:text-2xl font-bold block">
-              APLICA PARA UNA CONSULTORÍA GRATUITA
-            </span>
-            <span className="text-sm text-red-200 block mt-1">
-              Hay disponibilidad SUPER LIMITADA...
-            </span>
-          </Link>
+            <button
+              onClick={() => router.push("/step/3")}
+              className="block w-full max-w-md mx-auto py-4 rounded-xl text-sm md:text-base font-bold tracking-wide uppercase transition-all duration-300 cursor-pointer"
+              style={{
+                background:
+                  "linear-gradient(135deg, #c9a84c 0%, #e0c068 50%, #c9a84c 100%)",
+                color: "#0a1628",
+                boxShadow: "0 4px 20px rgba(201, 168, 76, 0.25)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow =
+                  "0 6px 30px rgba(201, 168, 76, 0.45)";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow =
+                  "0 4px 20px rgba(201, 168, 76, 0.25)";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              Agendar Consultoría Gratuita
+            </button>
+
+            <p
+              className="text-xs mt-3"
+              style={{ color: "rgba(255,255,255,0.35)" }}
+            >
+              Cupos limitados — Reservá tu lugar ahora
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* Footer / Disclaimers */}
-      <footer className="bg-gray-950 border-t border-gray-800 px-4 py-8 text-sm text-gray-400 leading-relaxed">
-        <div className="max-w-4xl mx-auto space-y-4">
+      {/* Footer */}
+      <footer
+        className="relative z-10 px-4 py-6 text-[10px] leading-relaxed"
+        style={{
+          color: "rgba(255,255,255,0.2)",
+          borderTop: "1px solid rgba(255,255,255,0.05)",
+        }}
+      >
+        <div className="max-w-3xl mx-auto space-y-2">
           <p>
-            Este sitio no es parte de los sitios web de Facebook o Instagram.
-            Adicionalmente, este sitio NO esta respaldado por Facebook o
-            Instagram de alguna manera. FACEBOOK es una marca registrada de
-            Meta, Inc.
+            Esta página no es parte del sitio web de Facebook o Facebook Inc.
+            Este sitio no está respaldado por Facebook de alguna manera.
           </p>
-          <p>
-            Digital Entrepreneur LLC y este entrenamiento y oportunidad no esta
-            afiliado con ni esta respaldado por Instagram.
+          <p style={{ color: "rgba(255,255,255,0.3)" }}>
+            <strong>IMPORTANTE:</strong> Las ganancias mostradas son
+            aspiracionales. Los resultados varían según capacidad individual,
+            ética laboral, experiencia y otros factores.
           </p>
-          <p className="font-semibold text-gray-300">
-            IMPORTANTE: Disclaimers legales y de ganancias
-          </p>
-          <p>
-            * Las ganancias y representaciones de ingresos hechas por Digital
-            Entrepreneur LLC y sus promotores/patrocinadores/miembros/dueños son
-            exclusivamente de uso aspiracional para tu potencial de ingresos. El
-            éxito de Digital Entrepreneur LLC, los testimonios y otros ejemplos
-            usados no son comunes y no estan hechos para ser, ni son una garantía
-            de que tu u otras personas van a lograr los mismos resultados. Los
-            resultados de cada individuo siempre van a variar y van a depender de
-            tu capacidad individual, ética laboral, habilidades de negocio,
-            experiencia, nivel de motivación, diligencia en aplicar los programas
-            de Digital Entrepreneur LLC, la economía, los riesgos normales e
-            imprevistos de hacer negocios, y otros factores.
-          </p>
-          <p>
-            Digital Entrepreneur LLC no es responsable de tus acciones. Eres el
-            único responsable de tus propias acciones y decisiones y la
-            evaluación y uso de nuestros productos y servicios se debe basar en
-            tu propia diligencia. Aceptas que Digital Entrepreneur LLC no es
-            responsable de tus resultados al usar nuestros productos y servicios.
-            Revisa nuestros Términos & Condiciones para nuestro disclaimer
-            completo de responsabilidad y otras restricciones.
-          </p>
-          <p>
-            ¿Tienes preguntas sobre cualquiera de los programas de Digital
-            Entrepreneur LLC? ¿Te estas preguntando si los programas van a
-            funcionar para ti? Envíanos un email a info@emprendedordigital.co y
-            estaremos felices de discutir tus objetivos y mostrarte como nuestros
-            programas podrían ayudarte.
-          </p>
-          <p>
-            Dirección del negocio: 1309 Coffeen Ave Ste 1200 Sheridan, WY 82801
-          </p>
-          <div className="flex flex-wrap gap-2 text-blue-400">
-            <a href="#" className="hover:underline">*Disclaimer de Ingresos</a>
-            <span className="text-gray-600">|</span>
-            <a href="#" className="hover:underline">Política de Privacidad</a>
-            <span className="text-gray-600">|</span>
-            <a href="#" className="hover:underline">Terminos de Servicio</a>
-            <span className="text-gray-600">|</span>
-            <a href="#" className="hover:underline">Política de Reembolsos</a>
+          <div
+            className="flex flex-wrap gap-2 pt-1"
+            style={{ color: "rgba(201, 168, 76, 0.4)" }}
+          >
+            <a href="#" className="hover:underline">Disclaimer</a>
+            <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+            <a href="#" className="hover:underline">Privacidad</a>
+            <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+            <a href="#" className="hover:underline">Términos</a>
           </div>
-          <p className="text-center text-gray-500">
-            © 2026 Digital Entrepreneur LLC - Todos los derechos reservados
-          </p>
         </div>
       </footer>
     </main>

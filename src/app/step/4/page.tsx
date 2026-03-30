@@ -1,81 +1,131 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { trackFunnelStep } from "@/app/actions";
 
-export default function Step4() {
-  const router = useRouter();
+interface BookingData {
+  date: string;
+  time: string;
+  host: string;
+  duration: number;
+  timezone: string;
+}
 
-  // Track: lead confirmó la llamada → Paso 2: Confirmación día de qual call
+function formatSlotTime(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
+export default function Step4() {
+  const [booking, setBooking] = useState<BookingData | null>(null);
+
   useEffect(() => {
+    // Track stage
     const email = localStorage.getItem("af_lead_email");
-    if (email) trackFunnelStep(email, "day_qual_conf");
+    if (email) trackFunnelStep(email, "llamada_filtro");
+
+    // Read booking data from Step 3
+    const raw = localStorage.getItem("af_booking");
+    if (raw) {
+      try { setBooking(JSON.parse(raw)); } catch {}
+    }
   }, []);
 
-  // Auto-redirect after a few seconds (like "One Moment...")
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      router.push("/step/5");
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [router]);
-
   return (
-    <main className="min-h-screen bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center">
-        {/* Checkmark */}
-        <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-          <svg
-            className="w-8 h-8 text-green-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+    <div
+      className="flex min-h-screen flex-col items-center justify-center px-4 py-8"
+      style={{ fontFamily: "Inter, sans-serif", backgroundColor: "#0A0A0A" }}
+    >
+      <div
+        className="w-full max-w-md overflow-hidden"
+        style={{
+          borderRadius: 16,
+          backgroundColor: "#1A1A1A",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
+          border: "1px solid #2A2A2A",
+        }}
+      >
+        <div className="flex flex-col items-center gap-5 p-8 text-center">
+          {/* Success icon */}
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-full"
+            style={{ backgroundColor: "rgba(34, 197, 94, 0.1)" }}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            <svg
+              className="w-8 h-8"
+              style={{ color: "#22C55E" }}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
               strokeWidth={2.5}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+
+          <div>
+            <h1 className="text-[20px] font-bold mb-1" style={{ color: "#F5F5F5" }}>
+              ¡Reunión agendada!
+            </h1>
+            <p className="text-[13px]" style={{ color: "#A3A3A3" }}>
+              Recibirás un recordatorio antes de la llamada
+            </p>
+          </div>
+
+          {/* Booking details */}
+          {booking && (
+            <div
+              className="w-full flex flex-col gap-3 text-left"
+              style={{
+                padding: 20,
+                borderRadius: 12,
+                backgroundColor: "#141414",
+                border: "1px solid #2A2A2A",
+              }}
+            >
+              <div className="flex justify-between items-start">
+                <span className="text-[12px]" style={{ color: "#737373" }}>Fecha y hora</span>
+                <span className="text-[13px] font-medium text-right capitalize" style={{ color: "#F5F5F5" }}>
+                  {booking.date}
+                  <br />
+                  <span style={{ color: "#F59E0B" }}>{formatSlotTime(booking.time)}</span>
+                </span>
+              </div>
+              <div className="h-px" style={{ backgroundColor: "#2A2A2A" }} />
+              <div className="flex justify-between">
+                <span className="text-[12px]" style={{ color: "#737373" }}>Duración</span>
+                <span className="text-[13px] font-medium" style={{ color: "#F5F5F5" }}>
+                  {booking.duration} min
+                </span>
+              </div>
+              <div className="h-px" style={{ backgroundColor: "#2A2A2A" }} />
+              <div className="flex justify-between">
+                <span className="text-[12px]" style={{ color: "#737373" }}>Con</span>
+                <span className="text-[13px] font-medium" style={{ color: "#F5F5F5" }}>
+                  {booking.host}
+                </span>
+              </div>
+              <div className="h-px" style={{ backgroundColor: "#2A2A2A" }} />
+              <div className="flex justify-between">
+                <span className="text-[12px]" style={{ color: "#737373" }}>Zona horaria</span>
+                <span className="text-[13px] font-medium" style={{ color: "#D4D4D4" }}>
+                  {booking.timezone?.replace(/_/g, " ")}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <p className="text-[11px] pt-2" style={{ color: "#525252" }}>
+            Podés cerrar esta página. Te contactaremos por WhatsApp o email.
+          </p>
         </div>
-
-        <h2 className="text-xl font-bold text-gray-900 mb-1">
-          Reserva confirmada
-        </h2>
-        <p className="text-gray-500 text-sm mb-6">
-          Tienes una cita con <span className="font-medium">Pablo Collomb</span>
-        </p>
-
-        {/* Appointment Details */}
-        <div className="border border-gray-200 rounded-xl p-5 text-left space-y-3 mb-6">
-          <h3 className="text-lg font-bold text-gray-900">
-            Llamada de Calificación
-          </h3>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>15 min Appointment</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span>10:45 AM - 11:00 AM &nbsp; mar, 10 de marzo</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
-            </svg>
-            <span>Zona horaria local</span>
-          </div>
-        </div>
-
-        {/* Loading / Redirect */}
-        <p className="text-gray-400 text-sm animate-pulse">One Moment...</p>
       </div>
-    </main>
+
+      <div className="mt-6 text-center">
+        <span className="text-[11px]" style={{ color: "#525252" }}>Powered by AsproFunnel</span>
+      </div>
+    </div>
   );
 }

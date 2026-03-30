@@ -32,7 +32,7 @@ interface TrackStepData {
     /** Email del lead (identificador) */
     email: string;
     /** Stage del funnel al que mover el lead */
-    stage: "opt_in_lead" | "48hr_qual_conf" | "24hr_qual_conf" | "day_qual_conf" | "qualification_call" | "rebook_qual_call" | "qual_call_followup" | "48hr_sales_conf" | "24hr_sales_conf" | "day_sales_call" | "sales_call" | "rebook_sales_call" | "follow_up" | "client_activated" | "archived";
+    stage: "nuevo_prospecto" | "confirmar_cita" | "llamada_filtro" | "confirmar_cierre" | "llamada_cierre" | "en_seguimiento" | "socio_activado" | "en_pausa";
     /** ID de campaña (opcional, para filtrar si el email tiene leads en varias campañas) */
     campaignId?: string;
 }

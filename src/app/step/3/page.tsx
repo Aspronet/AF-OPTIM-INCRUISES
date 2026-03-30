@@ -1,281 +1,510 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { trackFunnelStep } from "@/app/actions";
 
-const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// ── Helpers ──
 
-function getCalendarDays(year: number, month: number) {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startDayOfWeek = (firstDay.getDay() + 6) % 7; // Monday = 0
-  const daysInMonth = lastDay.getDate();
+const MONTH_NAMES = [
+  "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+  "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
+];
+const DAY_HEADERS = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 
-  const days: (number | null)[] = [];
-  for (let i = 0; i < startDayOfWeek; i++) days.push(null);
-  for (let i = 1; i <= daysInMonth; i++) days.push(i);
+const SUPABASE_URL = "https://pcmuwwfivmstqnoiyqur.supabase.co";
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjbXV3d2Zpdm1zdHFub2l5cXVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NzA1MTMsImV4cCI6MjA4NzA0NjUxM30.MQ3aBluqw3nBz8FcAL9lc564JGsgEkm-E_FGuqfEoZE";
+
+function getCalendarDays(year: number, month: number): Date[] {
+  const first = new Date(year, month, 1);
+  const startOffset = (first.getDay() + 6) % 7;
+  const start = new Date(year, month, 1 - startOffset);
+  const days: Date[] = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    days.push(d);
+  }
   return days;
 }
 
-const MONTH_NAMES = [
-  "enero", "febrero", "marzo", "abril", "mayo", "junio",
-  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
-];
+function sameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
 
-const AVAILABLE_TIMES = ["10:45 AM", "11:15 AM", "11:45 AM", "12:15 PM", "1:00 PM", "1:30 PM"];
+function formatDate(d: Date): string {
+  return d.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+
+function formatSlotTime(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
+// ── Theme (dark, matching BookingPage.tsx) ──
+
+const c = {
+  pageBg: "#0A0A0A",
+  cardBg: "#1A1A1A",
+  cardBorder: "#2A2A2A",
+  sideBg: "#141414",
+  sideBorder: "#2A2A2A",
+  textPrimary: "#F5F5F5",
+  textSecondary: "#D4D4D4",
+  textMuted: "#A3A3A3",
+  textSubtle: "#737373",
+  textDisabled: "#525252",
+  inputBg: "#1A1A1A",
+  inputBorder: "#333333",
+  dayHoverBg: "#2A2A2A",
+  slotBg: "#1A1A1A",
+  slotBorder: "#333333",
+  slotText: "#F5F5F5",
+  navBtnBg: "#1A1A1A",
+  navBtnBorder: "#333333",
+  navBtnIcon: "#A3A3A3",
+  confirmBg: "#141414",
+  confirmBorder: "#2A2A2A",
+  shadow: "0 4px 24px rgba(0,0,0,0.3)",
+};
+
+// ── Component ──
 
 export default function Step3() {
   const router = useRouter();
-  const today = new Date();
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate());
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const today = useMemo(() => new Date(), []);
+  const leadTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
-  const days = getCalendarDays(currentYear, currentMonth);
+  // Calendar
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  const prevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
+  // Booking
+  const [slug, setSlug] = useState<string | null>(null);
+  const [hostName, setHostName] = useState("");
+  const [accentColor, setAccentColor] = useState("#0066FF");
+  const [bookingTitle, setBookingTitle] = useState("");
+  const [bookingDesc, setBookingDesc] = useState("");
+  const [welcomeMsg, setWelcomeMsg] = useState("");
+  const [durationMin, setDurationMin] = useState(15);
+  const [availableDaysOfWeek, setAvailableDaysOfWeek] = useState<Set<number>>(new Set());
+
+  // Lead info (from DB, for booking-confirm)
+  const [leadName, setLeadName] = useState("");
+  const [leadPhone, setLeadPhone] = useState("");
+
+  // Slots
+  const [slots, setSlots] = useState<string[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  const calendarDays = useMemo(() => getCalendarDays(viewYear, viewMonth), [viewYear, viewMonth]);
+
+  // ── Load: email → lead.user_id → booking_link (15min) → availability ──
+
+  const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // 1. Get lead email from localStorage
+        const email = localStorage.getItem("af_lead_email");
+        if (!email) { setInitialLoading(false); return; }
+
+        // 2. Find the lead → get the owner's user_id + lead info
+        const leadRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(email)}&select=user_id,name,phone&order=created_at.desc&limit=1`,
+          { headers }
+        );
+        const leads = await leadRes.json();
+        if (!leads?.[0]?.user_id) { setInitialLoading(false); return; }
+        const ownerId = leads[0].user_id;
+        if (leads[0].name) setLeadName(leads[0].name);
+        if (leads[0].phone) setLeadPhone(leads[0].phone);
+
+        // 3. Get the 15-min booking link for that owner
+        const linkRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/booking_links?user_id=eq.${ownerId}&is_active=eq.true&duration_minutes=eq.15&select=slug,accent_color,title,description,welcome_message,duration_minutes,user_id`,
+          { headers }
+        );
+        const links = await linkRes.json();
+        if (!links?.[0]) { setInitialLoading(false); return; }
+        const link = links[0];
+
+        setSlug(link.slug);
+        if (link.accent_color) setAccentColor(link.accent_color);
+        if (link.title) setBookingTitle(link.title);
+        if (link.description) setBookingDesc(link.description);
+        if (link.welcome_message) setWelcomeMsg(link.welcome_message);
+        if (link.duration_minutes) setDurationMin(link.duration_minutes);
+
+        // 4. Get host name
+        const profRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/user_profiles?id=eq.${ownerId}&select=first_name,last_name`,
+          { headers }
+        );
+        const profs = await profRes.json();
+        if (profs?.[0]) {
+          setHostName(`${profs[0].first_name || ""} ${profs[0].last_name || ""}`.trim());
+        }
+
+        // 5. Get which days of week have availability
+        const schedRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/availability_schedules?user_id=eq.${ownerId}&is_active=eq.true&select=day_of_week`,
+          { headers }
+        );
+        const scheds = await schedRes.json();
+        if (Array.isArray(scheds)) {
+          const jsDays = new Set(
+            scheds.map((s: { day_of_week: number }) => (s.day_of_week === 6 ? 0 : s.day_of_week + 1))
+          );
+          setAvailableDaysOfWeek(jsDays);
+        }
+
+        console.log(`Booking loaded: owner=${ownerId.slice(0,8)} slug=${link.slug} days=${scheds.length}`);
+
+        // 6. Preload slots for today
+        fetchSlots(today, link.slug);
+      } catch (e) {
+        console.error("Init error:", e);
+        console.error("Failed to load booking info:", e);
+      }
+      setInitialLoading(false);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Fetch slots (direct client fetch, same as BookingPage) ──
+
+  const slugRef = React.useRef(slug);
+  slugRef.current = slug;
+
+  async function fetchSlots(date: Date, overrideSlug?: string) {
+    const s = overrideSlug || slugRef.current;
+    if (!s) return;
+    setSlotsLoading(true);
+    setSlots([]);
+    setSelectedSlot(null);
+
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    const dateStr = `${y}-${m}-${d}`;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/booking-availability?slug=${encodeURIComponent(s)}&date=${dateStr}&timezone=${encodeURIComponent(tz)}`
+      );
+      const data = await res.json();
+      if (res.ok && data.slots) {
+        setSlots(data.slots);
+        if (data.host) setHostName(data.host);
+      }
+    } catch (e) {
+      console.error("Failed to fetch slots:", e);
     }
-    setSelectedDay(null);
-    setSelectedTime(null);
-  };
+    setSlotsLoading(false);
+  }
 
-  const nextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
-    setSelectedDay(null);
-    setSelectedTime(null);
+  const handleDateSelect = (date: Date) => {
+    if (date < today && !sameDay(date, today)) return;
+    setSelectedDate(date);
+    fetchSlots(date);
   };
 
   const handleConfirm = async () => {
-    if (selectedDay && selectedTime) {
-      // Track: lead agendó llamada de calificación → Paso 2: Confirmación Qual Call
-      const email = localStorage.getItem("af_lead_email");
-      if (email) await trackFunnelStep(email, "48hr_qual_conf");
-      router.push("/step/4");
+    if (!selectedDate || !selectedSlot || !slugRef.current) return;
+    setConfirming(true);
+
+    const email = localStorage.getItem("af_lead_email");
+
+    const y = selectedDate.getFullYear();
+    const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
+    const d = String(selectedDate.getDate()).padStart(2, "0");
+    const dateStr = `${y}-${m}-${d}`;
+
+    try {
+      // Create the actual booking via booking-confirm edge function
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/booking-confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: slugRef.current,
+          date: dateStr,
+          time: selectedSlot,
+          name: leadName || "Lead",
+          email: email || "",
+          phone: leadPhone || null,
+          timezone: leadTimezone,
+          notes: null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Booking confirm error:", err);
+        setConfirming(false);
+        return;
+      }
+    } catch (e) {
+      console.error("Booking confirm failed:", e);
+      setConfirming(false);
+      return;
     }
+
+    // Track stage
+    if (email) await trackFunnelStep(email, "llamada_filtro");
+
+    localStorage.setItem("af_booking", JSON.stringify({
+      date: formatDate(selectedDate),
+      time: selectedSlot,
+      host: hostName,
+      duration: durationMin,
+      timezone: leadTimezone,
+    }));
+    router.push("/step/4");
   };
 
-  const selectedDateLabel = selectedDay
-    ? `${DAYS_OF_WEEK[(new Date(currentYear, currentMonth, selectedDay).getDay() + 6) % 7].toLowerCase()}, ${selectedDay} de ${MONTH_NAMES[currentMonth]}`
-    : null;
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewYear((y) => y - 1); setViewMonth(11); }
+    else setViewMonth((m) => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewYear((y) => y + 1); setViewMonth(0); }
+    else setViewMonth((m) => m + 1);
+  };
+
+  // ── Loading state ──
+
+  if (initialLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center" style={{ fontFamily: "Inter, sans-serif", backgroundColor: c.pageBg }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: c.cardBorder, borderTopColor: accentColor }} />
+          <span className="text-[13px]" style={{ color: c.textMuted }}>Cargando disponibilidad...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-white text-gray-900 flex flex-col">
-      {/* Hero */}
-      <section className="bg-white px-4 pt-10 pb-6 text-center">
-        <h1 className="text-2xl md:text-4xl font-bold leading-tight mb-3">
-          Estás A Un Paso de Certificarte Como Vendedor Digital
-        </h1>
-        <p className="text-gray-600 text-base md:text-lg max-w-2xl mx-auto">
-          Mira el video y completa el formulario en esta página para reservar tu
-          consultoría gratuita
-        </p>
-      </section>
-
-      {/* Video */}
-      <section className="px-4 pb-8 flex justify-center">
-        <div className="relative w-full max-w-3xl aspect-video bg-gray-900 rounded-lg overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/30 transition">
-              <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-white border-b-[12px] border-b-transparent ml-1" />
-            </div>
-          </div>
-          {/* Reemplazar con iframe real del video */}
-        </div>
-      </section>
-
-      {/* Booking Widget */}
-      <section className="px-4 pb-12 flex justify-center">
-        <div className="w-full max-w-3xl bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-          {/* Header */}
-          <div className="p-6 border-b border-gray-100">
-            <p className="text-sm text-gray-500">Digital Entrepreneur</p>
-            <h2 className="text-xl font-bold">Llamada de Calificación</h2>
-            <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-600">
-              <span className="flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                15 min Appointment
-              </span>
-              <span className="flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                {selectedDateLabel || "Selecciona una fecha"}
-              </span>
-              <span className="flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" /></svg>
-                Zona horaria
-              </span>
-            </div>
-            <p className="text-sm text-gray-600 mt-4">
-              Tendrás una llamada con nuestro oficial de admisiones para
-              determinar si cumples con todos los requisitos para ser parte de
-              nuestra Academia de Ventas Digitales.
-            </p>
-          </div>
-
-          {/* Calendar + Times */}
-          <div className="flex flex-col md:flex-row">
-            {/* Calendar */}
-            <div className="p-6 md:border-r border-gray-100 flex-1">
-              <div className="flex items-center gap-1 mb-4">
-                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                <span className="font-medium">Seleccionar un día</span>
+    <div
+      className="flex min-h-screen flex-col items-center justify-center px-4 py-8"
+      style={{ fontFamily: "Inter, sans-serif", backgroundColor: c.pageBg }}
+    >
+      <div
+        className="flex w-full flex-col overflow-hidden md:max-w-4xl md:flex-row"
+        style={{ borderRadius: 16, backgroundColor: c.cardBg, boxShadow: c.shadow, border: `1px solid ${c.cardBorder}` }}
+      >
+        {/* ── Left panel — meeting info ── */}
+        <div
+          className="flex flex-col gap-4 md:w-72 shrink-0"
+          style={{ padding: 28, borderRight: `1px solid ${c.sideBorder}`, backgroundColor: c.sideBg }}
+        >
+          {/* Host info */}
+          {hostName && (
+            <div className="flex items-center gap-3">
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-full text-[14px] font-bold text-white"
+                style={{ backgroundColor: accentColor }}
+              >
+                {hostName.split(" ").map((w) => w[0]?.toUpperCase() || "").join("").slice(0, 2)}
               </div>
+              <div className="flex flex-col">
+                <span className="text-[13px] font-medium" style={{ color: c.textPrimary }}>{hostName}</span>
+                <span className="text-[11px]" style={{ color: c.textSubtle }}>Tu asesor personal</span>
+              </div>
+            </div>
+          )}
 
-              <div className="flex items-center justify-between mb-4">
-                <button onClick={prevMonth} className="p-1 hover:bg-gray-100 rounded">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                </button>
-                <span className="font-medium capitalize">
-                  {MONTH_NAMES[currentMonth]} {currentYear}
+          <h1 className="text-[22px] font-bold" style={{ fontFamily: "Satoshi, Inter, sans-serif", color: c.textPrimary }}>
+            {bookingTitle || "Reunión rápida"}
+          </h1>
+
+          <p className="text-[13px] leading-relaxed" style={{ color: c.textMuted }}>
+            {bookingDesc || "Elegí el día y horario que más te convenga para que podamos conversar sobre la oportunidad."}
+          </p>
+
+          {welcomeMsg && (
+            <p className="text-[13px] italic" style={{ color: c.textSubtle }}>{welcomeMsg}</p>
+          )}
+
+          <div className="flex flex-col gap-2 pt-2">
+            <div className="flex items-center gap-2">
+              <svg className="w-3.5 h-3.5" style={{ color: c.textMuted }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-[13px]" style={{ color: c.textMuted }}>{durationMin} min</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-3.5 h-3.5" style={{ color: c.textMuted }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+              </svg>
+              <span className="text-[13px]" style={{ color: c.textMuted }}>
+                {leadTimezone.replace(/_/g, " ")}
+              </span>
+            </div>
+            {selectedDate && selectedSlot && (
+              <div className="flex items-center gap-2 pt-1">
+                <svg className="w-3.5 h-3.5" style={{ color: accentColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="text-[13px] font-medium capitalize" style={{ color: accentColor }}>
+                  {formatDate(selectedDate)} · {formatSlotTime(selectedSlot)}
                 </span>
-                <button onClick={nextMonth} className="p-1 hover:bg-gray-100 rounded">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right panel — calendar + slots ── */}
+        <div className="flex flex-1 flex-col" style={{ padding: 28, minHeight: 460 }}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
+            {/* Calendar */}
+            <div className="flex flex-col gap-4 lg:min-w-[320px] shrink-0">
+              <h2 className="text-[16px] font-bold" style={{ color: c.textPrimary }}>Seleccioná una fecha</h2>
+
+              {/* Month header */}
+              <div className="flex items-center justify-between">
+                <span className="text-[15px] font-bold" style={{ fontFamily: "Satoshi, Inter, sans-serif", color: c.textPrimary }}>
+                  {MONTH_NAMES[viewMonth]} {viewYear}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={prevMonth}
+                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md"
+                    style={{ border: `1px solid ${c.navBtnBorder}`, backgroundColor: c.navBtnBg }}
+                  >
+                    <svg className="w-4 h-4" style={{ color: c.navBtnIcon }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={nextMonth}
+                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md"
+                    style={{ border: `1px solid ${c.navBtnBorder}`, backgroundColor: c.navBtnBg }}
+                  >
+                    <svg className="w-4 h-4" style={{ color: c.navBtnIcon }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                {DAYS_OF_WEEK.map((d) => (
-                  <div key={d} className="font-medium text-gray-500 py-1">{d}</div>
-                ))}
-                {days.map((day, i) => (
-                  <div key={i} className="py-1">
-                    {day ? (
-                      <button
-                        onClick={() => { setSelectedDay(day); setSelectedTime(null); }}
-                        className={`w-9 h-9 rounded-full text-sm font-medium transition ${
-                          selectedDay === day
-                            ? "bg-blue-600 text-white"
-                            : "hover:bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {day}
-                      </button>
-                    ) : null}
+              {/* Day headers */}
+              <div className="grid grid-cols-7">
+                {DAY_HEADERS.map((d) => (
+                  <div key={d} className="flex items-center justify-center py-1.5">
+                    <span className="text-[11px] font-semibold" style={{ color: c.textSubtle }}>{d}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Timezone */}
-              <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
-                <span>Zona horaria</span>
-                <select className="border border-gray-200 rounded px-2 py-1 text-sm bg-white">
-                  <option>America/Argentina/Buenos_Aires</option>
-                  <option>America/New_York</option>
-                  <option>America/Mexico_City</option>
-                  <option>America/Bogota</option>
-                  <option>Europe/Madrid</option>
-                </select>
+              {/* Day grid — 42 cells */}
+              <div className="grid grid-cols-7 gap-1">
+                {calendarDays.map((day) => {
+                  const isCurrentMonth = day.getMonth() === viewMonth;
+                  const isPast = day < today && !sameDay(day, today);
+                  const isToday = sameDay(day, today);
+                  const isSelected = selectedDate ? sameDay(day, selectedDate) : false;
+                  const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                  const hasAvailability = availableDaysOfWeek.size === 0 || availableDaysOfWeek.has(day.getDay());
+                  const isDisabled = isPast || !hasAvailability || !isCurrentMonth;
+
+                  return (
+                    <button
+                      key={day.toISOString()}
+                      onClick={() => !isDisabled && handleDateSelect(day)}
+                      disabled={isDisabled}
+                      className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none text-[13px] font-medium transition-all disabled:cursor-not-allowed disabled:opacity-30"
+                      style={{
+                        backgroundColor: isSelected ? accentColor : isToday ? `${accentColor}15` : "transparent",
+                        color: isSelected ? "#FFFFFF" : !isCurrentMonth ? c.textDisabled : isWeekend ? c.textSubtle : c.textPrimary,
+                      }}
+                    >
+                      {day.getDate()}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Time Slots */}
-            {selectedDay && (
-              <div className="p-6 flex-1">
-                <p className="font-medium mb-4 capitalize">
-                  {selectedDateLabel}
+            {/* Time slots */}
+            {selectedDate && (
+              <div
+                className="flex flex-col gap-3 border-t pt-4 lg:w-[200px] lg:min-w-[200px] lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6"
+                style={{ borderColor: c.slotBorder }}
+              >
+                <h3 className="text-[14px] font-bold" style={{ color: c.textPrimary }}>Elegí un horario</h3>
+                <p className="text-[12px] capitalize" style={{ color: c.textMuted }}>
+                  {formatDate(selectedDate)}
                 </p>
-                <div className="space-y-2">
-                  {AVAILABLE_TIMES.map((time) => (
-                    <button
-                      key={time}
-                      onClick={() => setSelectedTime(time)}
-                      className={`w-full py-3 rounded-lg border text-sm font-medium transition ${
-                        selectedTime === time
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "border-blue-600 text-blue-600 hover:bg-blue-50"
-                      }`}
-                    >
-                      {time}
-                    </button>
-                  ))}
-                </div>
-                {selectedTime && (
+
+                {slotsLoading ? (
+                  <div className="flex flex-1 items-center justify-center py-8">
+                    <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: c.cardBorder, borderTopColor: accentColor }} />
+                  </div>
+                ) : slots.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-2 py-8">
+                    <svg className="w-5 h-5" style={{ color: c.textSubtle }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-[12px] text-center" style={{ color: c.textSubtle }}>
+                      No hay horarios disponibles para esta fecha
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex max-h-[300px] flex-col gap-1.5 overflow-y-auto pr-1 scrollbar-thin">
+                    {slots.map((slot) => {
+                      const isSlotSelected = selectedSlot === slot;
+                      return (
+                        <button
+                          key={slot}
+                          onClick={() => setSelectedSlot(isSlotSelected ? null : slot)}
+                          className="cursor-pointer rounded-lg py-2.5 text-center text-[13px] font-semibold transition-all"
+                          style={{
+                            border: `1px solid ${isSlotSelected ? accentColor : c.slotBorder}`,
+                            backgroundColor: isSlotSelected ? accentColor : c.slotBg,
+                            color: isSlotSelected ? "#FFFFFF" : c.slotText,
+                          }}
+                        >
+                          {formatSlotTime(slot)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {selectedSlot && (
                   <button
                     onClick={handleConfirm}
-                    className="w-full mt-4 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
+                    disabled={confirming}
+                    className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-none py-3 text-[14px] font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{ backgroundColor: accentColor }}
                   >
-                    Confirmar
+                    {confirming && (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    )}
+                    Confirmar horario
                   </button>
                 )}
               </div>
             )}
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Footer / Disclaimers */}
-      <footer className="bg-gray-50 border-t border-gray-200 px-4 py-8 text-sm text-gray-500 leading-relaxed">
-        <div className="max-w-4xl mx-auto space-y-4">
-          <p>
-            Este sitio no es parte de los sitios web de Facebook o Instagram.
-            Adicionalmente, este sitio NO esta respaldado por Facebook o
-            Instagram de alguna manera. FACEBOOK es una marca registrada de
-            Meta, Inc.
-          </p>
-          <p>
-            Digital Entrepreneur LLC y este entrenamiento y oportunidad no esta
-            afiliado con ni esta respaldado por Instagram.
-          </p>
-          <p className="font-semibold text-gray-700">
-            IMPORTANTE: Disclaimers legales y de ganancias
-          </p>
-          <p>
-            * Las ganancias y representaciones de ingresos hechas por Digital
-            Entrepreneur LLC y sus promotores/patrocinadores/miembros/dueños son
-            exclusivamente de uso aspiracional para tu potencial de ingresos. El
-            éxito de Digital Entrepreneur LLC, los testimonios y otros ejemplos
-            usados no son comunes y no estan hechos para ser, ni son una garantía
-            de que tu u otras personas van a lograr los mismos resultados. Los
-            resultados de cada individuo siempre van a variar y van a depender de
-            tu capacidad individual, ética laboral, habilidades de negocio,
-            experiencia, nivel de motivación, diligencia en aplicar los programas
-            de Digital Entrepreneur LLC, la economía, los riesgos normales e
-            imprevistos de hacer negocios, y otros factores.
-          </p>
-          <p>
-            Digital Entrepreneur LLC no es responsable de tus acciones. Eres el
-            único responsable de tus propias acciones y decisiones y la
-            evaluación y uso de nuestros productos y servicios se debe basar en
-            tu propia diligencia. Aceptas que Digital Entrepreneur LLC no es
-            responsable de tus resultados al usar nuestros productos y servicios.
-            Revisa nuestros Términos & Condiciones para nuestro disclaimer
-            completo de responsabilidad y otras restricciones.
-          </p>
-          <p>
-            ¿Tienes preguntas sobre cualquiera de los programas de Digital
-            Entrepreneur LLC? ¿Te estas preguntando si los programas van a
-            funcionar para ti? Envíanos un email a info@emprendedordigital.co y
-            estaremos felices de discutir tus objetivos y mostrarte como nuestros
-            programas podrían ayudarte.
-          </p>
-          <p>
-            Dirección del negocio: 1309 Coffeen Ave Ste 1200 Sheridan, WY 82801
-          </p>
-          <div className="flex flex-wrap gap-2 text-blue-500">
-            <a href="#" className="hover:underline">*Disclaimer de Ingresos</a>
-            <span className="text-gray-400">|</span>
-            <a href="#" className="hover:underline">Política de Privacidad</a>
-            <span className="text-gray-400">|</span>
-            <a href="#" className="hover:underline">Terminos de Servicio</a>
-            <span className="text-gray-400">|</span>
-            <a href="#" className="hover:underline">Política de Reembolsos</a>
-          </div>
-          <p className="text-center text-gray-400">
-            © 2026 Digital Entrepreneur LLC - Todos los derechos reservados
-          </p>
-        </div>
-      </footer>
-    </main>
+      {/* Footer */}
+      <div className="mt-6 text-center">
+        <span className="text-[11px]" style={{ color: c.textSubtle }}>Powered by AsproFunnel</span>
+      </div>
+    </div>
   );
 }
