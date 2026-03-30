@@ -24,7 +24,8 @@ var AsproFunnel = class {
         country: data.country,
         campaign_id: data.campaignId,
         source: data.source || "landing",
-        metadata: data.metadata
+        metadata: data.metadata,
+        assign_to_slug: data.assignToSlug || void 0
       })
     });
     const json = await res.json();

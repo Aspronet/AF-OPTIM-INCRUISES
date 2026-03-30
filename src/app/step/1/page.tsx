@@ -55,6 +55,24 @@ export default function Step1() {
   }
   const hasUtms = Object.keys(utms).length > 0;
 
+  // Direct assignment slug (?u=ywbty4ew)
+  const assignSlug = searchParams.get("u") || "";
+
+  // Track funnel view for this user's slug
+  useEffect(() => {
+    if (assignSlug) {
+      fetch("https://pcmuwwfivmstqnoiyqur.supabase.co/rest/v1/rpc/increment_funnel_views", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjbXV3d2Zpdm1zdHFub2l5cXVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NzA1MTMsImV4cCI6MjA4NzA0NjUxM30.MQ3aBluqw3nBz8FcAL9lc564JGsgEkm-E_FGuqfEoZE",
+          Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjbXV3d2Zpdm1zdHFub2l5cXVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NzA1MTMsImV4cCI6MjA4NzA0NjUxM30.MQ3aBluqw3nBz8FcAL9lc564JGsgEkm-E_FGuqfEoZE",
+        },
+        body: JSON.stringify({ p_user_slug: assignSlug, p_type: "lead_capture" }),
+      }).catch(() => {});
+    }
+  }, [assignSlug]);
+
   useEffect(() => {
     fetch("https://ipapi.co/json/")
       .then((r) => r.json())
@@ -247,6 +265,9 @@ export default function Step1() {
               <input type="hidden" name="countryIso" value={selected.iso} />
               {hasUtms && (
                 <input type="hidden" name="utms" value={JSON.stringify(utms)} />
+              )}
+              {assignSlug && (
+                <input type="hidden" name="assignSlug" value={assignSlug} />
               )}
 
               {/* Phone */}

@@ -21,6 +21,8 @@ export interface LeadData {
   country?: string;
   source?: string;
   metadata?: Record<string, unknown>;
+  /** Slug del usuario para asignación directa (bypassa la pool) */
+  assignToSlug?: string;
 }
 
 export interface LeadResponse {
@@ -91,6 +93,7 @@ export class AsproFunnel {
         campaign_id: data.campaignId,
         source: data.source || "landing",
         metadata: data.metadata,
+        assign_to_slug: data.assignToSlug || undefined,
       }),
     });
 

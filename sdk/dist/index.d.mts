@@ -17,6 +17,8 @@ interface LeadData {
     country?: string;
     source?: string;
     metadata?: Record<string, unknown>;
+    /** Slug del usuario para asignación directa (bypassa la pool) */
+    assignToSlug?: string;
 }
 interface LeadResponse {
     ok: boolean;

@@ -34,6 +34,7 @@ export async function submitLead(
   const countryCode = formData.get("countryCode") as string;
   const countryIso = formData.get("countryIso") as string;
   const utmsRaw = formData.get("utms") as string | null;
+  const assignSlug = formData.get("assignSlug") as string | null;
 
   if (!name || !email) {
     return { ok: false, error: "Nombre y email son requeridos" };
@@ -60,6 +61,7 @@ export async function submitLead(
       campaignId: process.env.AF_CAMPAIGN_ID!,
       source,
       metadata: utms || undefined,
+      assignToSlug: assignSlug || undefined,
     });
 
     return { ok: true, error: "", email, name, phone: fullPhone, assignedTo: res.assignedTo };
