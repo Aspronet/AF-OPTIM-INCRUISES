@@ -1,10 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { lookupLead, trackFunnelStep } from "@/app/actions";
 
-export default function Step2() {
+export default function Step2Page() {
+  return (
+    <Suspense>
+      <Step2 />
+    </Suspense>
+  );
+}
+
+function Step2() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [ready, setReady] = useState(false);

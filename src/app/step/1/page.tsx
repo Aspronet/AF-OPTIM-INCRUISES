@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, useRef } from "react";
+import { Suspense, useActionState, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { submitLead, type FormState } from "@/app/actions";
 
@@ -37,7 +37,15 @@ const initial: FormState = { ok: false, error: "" };
 
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
 
-export default function Step1() {
+export default function Step1Page() {
+  return (
+    <Suspense>
+      <Step1 />
+    </Suspense>
+  );
+}
+
+function Step1() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [state, action, pending] = useActionState(submitLead, initial);
