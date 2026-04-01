@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@asprofunnel/sdk": "file:./sdk",
+    "libphonenumber-js": "^1.12.41",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"

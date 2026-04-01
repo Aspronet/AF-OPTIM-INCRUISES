@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { trackFunnelStep } from "@/app/actions";
 
 interface BookingData {
   date: string;
@@ -22,11 +21,6 @@ export default function Step4() {
   const [booking, setBooking] = useState<BookingData | null>(null);
 
   useEffect(() => {
-    // Track stage
-    const email = localStorage.getItem("af_lead_email");
-    if (email) trackFunnelStep(email, "llamada_filtro");
-
-    // Read booking data from Step 3
     const raw = localStorage.getItem("af_booking");
     if (raw) {
       try { setBooking(JSON.parse(raw)); } catch {}
@@ -34,98 +28,93 @@ export default function Step4() {
   }, []);
 
   return (
-    <div
-      className="flex min-h-screen flex-col items-center justify-center px-4 py-8"
-      style={{ fontFamily: "Inter, sans-serif", backgroundColor: "#0A0A0A" }}
+    <main
+      className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-5 py-8 safe-top safe-bottom"
+      style={{
+        background: "linear-gradient(160deg, #060b18 0%, #0a1230 40%, #0d1a3a 65%, #060b18 100%)",
+      }}
     >
-      <div
-        className="w-full max-w-md overflow-hidden"
-        style={{
-          borderRadius: 16,
-          backgroundColor: "#1A1A1A",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
-          border: "1px solid #2A2A2A",
-        }}
-      >
-        <div className="flex flex-col items-center gap-5 p-8 text-center">
-          {/* Success icon */}
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-full"
-            style={{ backgroundColor: "rgba(34, 197, 94, 0.1)" }}
+      <div className="w-full max-w-md text-center">
+        {/* Success icon */}
+        <div
+          className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full"
+          style={{ background: "rgba(34, 197, 94, 0.1)" }}
+        >
+          <svg
+            className="w-10 h-10"
+            style={{ color: "#22c55e" }}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
           >
-            <svg
-              className="w-8 h-8"
-              style={{ color: "#22C55E" }}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
 
-          <div>
-            <h1 className="text-[20px] font-bold mb-1" style={{ color: "#F5F5F5" }}>
-              ¡Reunión agendada!
-            </h1>
-            <p className="text-[13px]" style={{ color: "#A3A3A3" }}>
-              Recibirás un recordatorio antes de la llamada
-            </p>
-          </div>
+        <h1
+          className="text-xl md:text-2xl font-bold text-white mb-3"
+          style={{ fontFamily: "var(--font-inter), sans-serif" }}
+        >
+          ¡Listo! Tu llamada está confirmada.
+        </h1>
 
-          {/* Booking details */}
-          {booking && (
-            <div
-              className="w-full flex flex-col gap-3 text-left"
-              style={{
-                padding: 20,
-                borderRadius: 12,
-                backgroundColor: "#141414",
-                border: "1px solid #2A2A2A",
-              }}
-            >
+        <p
+          className="text-sm mb-8 leading-relaxed"
+          style={{
+            fontFamily: "var(--font-inter), sans-serif",
+            color: "rgba(255,255,255,0.5)",
+          }}
+        >
+          Vas a recibir un mensaje por WhatsApp con los detalles. Prepara tus preguntas — vamos a aprovechar cada minuto. ¡Nos vemos en la llamada!
+        </p>
+
+        {/* Booking details card */}
+        {booking && (
+          <div
+            className="text-left rounded-xl p-5"
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            <div className="flex flex-col gap-3">
               <div className="flex justify-between items-start">
-                <span className="text-[12px]" style={{ color: "#737373" }}>Fecha y hora</span>
-                <span className="text-[13px] font-medium text-right capitalize" style={{ color: "#F5F5F5" }}>
+                <span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Fecha y hora</span>
+                <span className="text-[13px] font-medium text-right capitalize text-white">
                   {booking.date}
                   <br />
-                  <span style={{ color: "#F59E0B" }}>{formatSlotTime(booking.time)}</span>
+                  <span style={{ color: "#d4a843" }}>{formatSlotTime(booking.time)}</span>
                 </span>
               </div>
-              <div className="h-px" style={{ backgroundColor: "#2A2A2A" }} />
+              <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
               <div className="flex justify-between">
-                <span className="text-[12px]" style={{ color: "#737373" }}>Duración</span>
-                <span className="text-[13px] font-medium" style={{ color: "#F5F5F5" }}>
-                  {booking.duration} min
-                </span>
+                <span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Duración</span>
+                <span className="text-[13px] font-medium text-white">{booking.duration} min</span>
               </div>
-              <div className="h-px" style={{ backgroundColor: "#2A2A2A" }} />
+              <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
               <div className="flex justify-between">
-                <span className="text-[12px]" style={{ color: "#737373" }}>Con</span>
-                <span className="text-[13px] font-medium" style={{ color: "#F5F5F5" }}>
-                  {booking.host}
-                </span>
+                <span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Con</span>
+                <span className="text-[13px] font-medium text-white">{booking.host}</span>
               </div>
-              <div className="h-px" style={{ backgroundColor: "#2A2A2A" }} />
+              <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
               <div className="flex justify-between">
-                <span className="text-[12px]" style={{ color: "#737373" }}>Zona horaria</span>
-                <span className="text-[13px] font-medium" style={{ color: "#D4D4D4" }}>
+                <span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Zona horaria</span>
+                <span className="text-[13px] font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
                   {booking.timezone?.replace(/_/g, " ")}
                 </span>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          <p className="text-[11px] pt-2" style={{ color: "#525252" }}>
-            Podés cerrar esta página. Te contactaremos por WhatsApp o email.
-          </p>
-        </div>
+        <p
+          className="text-[11px] mt-6"
+          style={{ color: "rgba(255,255,255,0.2)" }}
+        >
+          Puedes cerrar esta página. Te contactaremos por WhatsApp o email.
+        </p>
       </div>
-
-      <div className="mt-6 text-center">
-        <span className="text-[11px]" style={{ color: "#525252" }}>Powered by AsproFunnel</span>
-      </div>
-    </div>
+    </main>
   );
 }
