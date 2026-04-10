@@ -8,7 +8,7 @@ import type { VideoEventPayload } from "@/components/VideoPlayer";
 
 // ─── CONFIGURATION ──────────────────────────────────────
 // Change these to swap the video for each funnel
-const VIDEO_URL = "https://www.w3schools.com/html/mov_bbb.mp4";
+const VIDEO_URL = "https://incruises.b-cdn.net/in%20cruises%201.mov";
 const VIDEO_POSTER = "";
 const VIDEO_NAME = "VSL Principal"; // name shown in lead_activity metadata
 // ────────────────────────────────────────────────────────
