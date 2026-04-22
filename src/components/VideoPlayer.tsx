@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
+import Hls from "hls.js";
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -135,6 +136,46 @@ export default function VideoPlayer({
     };
   }, [buildAbandonPayload, onVideoEvent, abandonBeaconUrl, abandonBeaconData]);
 
+  // ─── HLS attach (for .m3u8 streams) ─────────────────
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !src) return;
+
+    const isHls = /\.m3u8($|\?)/i.test(src);
+    if (!isHls) {
+      v.src = src;
+      return;
+    }
+
+    // Safari has native HLS support
+    if (v.canPlayType("application/vnd.apple.mpegurl")) {
+      v.src = src;
+      return;
+    }
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        capLevelToPlayerSize: true,
+        startLevel: -1,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        backBufferLength: 30,
+        abrEwmaDefaultEstimate: 1_000_000,
+      });
+      hls.loadSource(src);
+      hls.attachMedia(v);
+      return () => {
+        hls.destroy();
+      };
+    }
+
+    // Fallback
+    v.src = src;
+  }, [src]);
+
   // ─── Autoplay muted ─────────────────────────────────
 
   useEffect(() => {
@@ -262,7 +303,7 @@ export default function VideoPlayer({
       style={{
         border: "1px solid rgba(255,255,255,0.1)",
         boxShadow:
-          "0 20px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.05) inset, 0 0 60px rgba(212, 168, 67, 0.03)",
+          "0 20px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.05) inset, 0 0 60px rgba(74, 222, 128, 0.03)",
         background: "#000",
       }}
       onMouseMove={scheduleHide}
@@ -274,9 +315,8 @@ export default function VideoPlayer({
     >
       <video
         ref={videoRef}
-        src={src}
         poster={poster}
-        preload="metadata"
+        preload="auto"
         playsInline
         className="absolute inset-0 w-full h-full object-contain"
         onPlay={handlePlay}
@@ -292,19 +332,19 @@ export default function VideoPlayer({
           className="absolute inset-0 flex items-center justify-center z-10 cursor-pointer"
           style={{
             background:
-              "linear-gradient(135deg, rgba(10, 18, 48, 0.8) 0%, rgba(6, 11, 24, 0.9) 100%)",
+              "linear-gradient(135deg, rgba(18, 22, 28, 0.85) 0%, rgba(11, 13, 16, 0.92) 100%)",
           }}
         >
           <button
             className="play-pulse flex items-center justify-center w-[56px] h-[56px] md:w-[72px] md:h-[72px] rounded-full cursor-pointer"
             style={{
-              background: "rgba(212, 168, 67, 0.12)",
-              border: "2px solid rgba(212, 168, 67, 0.4)",
+              background: "rgba(74, 222, 128, 0.12)",
+              border: "2px solid rgba(74, 222, 128, 0.4)",
             }}
           >
             <div
               className="w-0 h-0 border-t-[9px] border-t-transparent border-l-[16px] border-b-[9px] border-b-transparent ml-1"
-              style={{ borderLeftColor: "#d4a843" }}
+              style={{ borderLeftColor: "#4ADE80" }}
             />
           </button>
         </div>
@@ -360,7 +400,7 @@ export default function VideoPlayer({
                   className="absolute left-0 h-1 rounded-full"
                   style={{
                     width: `${(muted ? 0 : volume) * 100}%`,
-                    background: "linear-gradient(90deg, #d4a843, #e8c45a)",
+                    background: "linear-gradient(90deg, #4ADE80, #86EFAC)",
                   }}
                 />
                 <input
@@ -376,8 +416,8 @@ export default function VideoPlayer({
                   className="absolute w-2.5 h-2.5 rounded-full pointer-events-none"
                   style={{
                     left: `calc(${(muted ? 0 : volume) * 100}% - 5px)`,
-                    background: "#e8c45a",
-                    boxShadow: "0 0 4px rgba(212, 168, 67, 0.5)",
+                    background: "#86EFAC",
+                    boxShadow: "0 0 4px rgba(74, 222, 128, 0.5)",
                   }}
                 />
               </div>

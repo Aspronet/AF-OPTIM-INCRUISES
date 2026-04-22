@@ -50,7 +50,8 @@ var AsproFunnel = class {
         campaign_id: data.campaignId,
         source: data.source || "landing",
         metadata: data.metadata,
-        assign_to_slug: data.assignToSlug || void 0
+        assign_to_slug: data.assignToSlug || void 0,
+        assign_to_user_id: data.assignToUserId || void 0
       })
     });
     const json = await res.json();

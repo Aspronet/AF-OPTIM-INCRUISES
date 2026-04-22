@@ -208,7 +208,7 @@ function Step1() {
     <main
       className="min-h-screen flex flex-col overflow-x-hidden"
       style={{
-        background: "linear-gradient(160deg, #060b18 0%, #0a1230 40%, #0d1a3a 65%, #060b18 100%)",
+        background: "linear-gradient(160deg, #0B0D10 0%, #12161C 40%, #0d1a3a 65%, #0B0D10 100%)",
       }}
     >
       {/* Content — Two column on desktop */}
@@ -221,80 +221,56 @@ function Step1() {
             <div
               className="inline-flex items-center gap-2 px-4 py-2 rounded-md mb-5 md:mb-6"
               style={{
-                background: "rgba(212, 168, 67, 0.08)",
-                border: "1px solid rgba(212, 168, 67, 0.3)",
-                boxShadow: "0 0 20px rgba(212, 168, 67, 0.06)",
+                background: "rgba(74, 222, 128, 0.08)",
+                border: "1px solid rgba(74, 222, 128, 0.3)",
+                boxShadow: "0 0 20px rgba(74, 222, 128, 0.06)",
               }}
             >
               <span
                 className="text-[12px] md:text-[13px] font-semibold uppercase"
                 style={{
-                  letterSpacing: "0.1em",
-                  color: "#d4a843",
+                  letterSpacing: "0.08em",
+                  color: "#4ADE80",
                 }}
               >
-                No Sigas Si No Estás Dispuesto A Comprometerte.
+                ⚠️ Presentación exclusiva — Cupos de certificación limitados por capacidad operativa
               </span>
             </div>
 
             <h1
-              className="text-[1.4rem] md:text-[2.5rem] font-bold text-white mb-4 md:mb-5"
+              className="text-[1.55rem] md:text-[2.55rem] font-bold text-white mb-5 md:mb-6"
               style={{
-                lineHeight: "1.15",
-                letterSpacing: "-0.015em",
+                lineHeight: "1.12",
+                letterSpacing: "-0.02em",
+                fontFamily: "var(--font-satoshi)",
               }}
             >
-              Descubre Cómo Estamos Ayudando A Personas Sin Experiencia A{" "}
+              Mientras tú miras contenido sobre inteligencia artificial, otros ya están{" "}
               <span
                 className="relative inline"
                 style={{
-                  color: "#d4a843",
+                  color: "#4ADE80",
                 }}
               >
-                Generar Ingresos En Dólares
+                cobrando miles de dólares
                 <span
                   className="absolute -bottom-1 left-0 w-full h-[3px] hidden md:block rounded-full"
                   style={{
-                    background: "linear-gradient(90deg, #d4a843, #e8c45a, #d4a843)",
+                    background: "linear-gradient(90deg, #4ADE80, #86EFAC, #4ADE80)",
                     opacity: 0.5,
                   }}
                 />
               </span>{" "}
-              — Con Un Sistema Que Les Consigue Prospectos, Les Dice Qué Decir, Y Los Guía Paso A Paso.
+              por instalar sistemas de ventas con IA a negocios reales.
             </h1>
 
             <p
-              className="text-sm md:text-[1.05rem] leading-relaxed mb-5 md:mb-7"
-              style={{ color: "rgba(255,255,255,0.5)" }}
+              className="text-[14px] md:text-[1.02rem] leading-relaxed mb-6 md:mb-0"
+              style={{ color: "rgba(255,255,255,0.62)" }}
             >
-              <strong className="font-bold text-white/70">SIN</strong> crear producto.{" "}
-              <strong className="font-bold text-white/70">SIN</strong> aprender marketing.{" "}
-              <strong className="font-bold text-white/70">SIN</strong> invertir fortunas.{" "}
-              <strong className="font-bold text-white/70">SIN</strong> hacerlo solo.
+              Esta es la presentación oficial de la única certificación respaldada por una compañía que construye estos sistemas para sus clientes a{" "}
+              <strong className="font-semibold text-white/85">más de 15.000 dólares por proyecto</strong>. Lo que vas a ver en los próximos minutos no es teoría. Es el sistema funcionando. <em style={{ fontFamily: "var(--font-instrument-serif)", fontStyle: "italic", color: "#4ADE80" }}>Contigo adentro.</em>
             </p>
-
-            {/* Bullets */}
-            <div className="space-y-4 mb-6 md:mb-0">
-              {[
-                "No se parece a nada que hayas intentado antes — ni dropshipping, ni agencias, ni freelancing.",
-                "Un sistema comprobado que genera prospectos y te dice exactamente qué hacer cada día.",
-                "Empezá part-time, sin dejar tu trabajo, con una inversión accesible.",
-              ].map((text, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 text-[13px] md:text-[15px]"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
-                >
-                  <span
-                    className="mt-0.5 shrink-0 text-sm font-bold"
-                    style={{ color: "#d4a843" }}
-                  >
-                    ✓
-                  </span>
-                  <span>{text}</span>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Right: Form card */}
@@ -307,14 +283,17 @@ function Step1() {
             }}
           >
             <div className="text-center mb-6">
-              <h2 className="text-lg md:text-xl font-bold text-white mb-1.5">
-                Accede Al Sistema
+              <h2
+                className="text-lg md:text-xl font-bold text-white mb-1.5"
+                style={{ fontFamily: "var(--font-satoshi)", letterSpacing: "-0.015em" }}
+              >
+                Reservá tu acceso
               </h2>
               <p
                 className="text-xs"
-                style={{ color: "rgba(255,255,255,0.35)" }}
+                style={{ color: "rgba(255,255,255,0.4)" }}
               >
-                Completa tus datos para ver cómo funciona
+                Completá tus datos para ver la presentación
               </p>
             </div>
 
@@ -322,7 +301,7 @@ function Step1() {
               <input
                 name="name"
                 type="text"
-                placeholder="Tu nombre completo"
+                placeholder="Tu nombre"
                 required
                 className="w-full px-4 py-3.5 rounded-lg text-white placeholder-white/25 outline-none transition-all duration-200 text-sm"
                 style={{
@@ -330,9 +309,9 @@ function Step1() {
                   border: "1px solid rgba(255,255,255,0.1)",
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(212, 168, 67, 0.5)";
+                  e.currentTarget.style.borderColor = "rgba(74, 222, 128, 0.5)";
                   e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(212, 168, 67, 0.08)";
+                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(74, 222, 128, 0.08)";
                 }}
                 onBlur={(e) => {
                   e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
@@ -343,7 +322,7 @@ function Step1() {
               <input
                 name="email"
                 type="email"
-                placeholder="Tu mejor email"
+                placeholder="Tu email"
                 required
                 className="w-full px-4 py-3.5 rounded-lg text-white placeholder-white/25 outline-none transition-all duration-200 text-sm"
                 style={{
@@ -351,9 +330,9 @@ function Step1() {
                   border: "1px solid rgba(255,255,255,0.1)",
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(212, 168, 67, 0.5)";
+                  e.currentTarget.style.borderColor = "rgba(74, 222, 128, 0.5)";
                   e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(212, 168, 67, 0.08)";
+                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(74, 222, 128, 0.08)";
                 }}
                 onBlur={(e) => {
                   e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
@@ -447,7 +426,7 @@ function Step1() {
                             onClick={() => { setSelected(country); setOpen(false); setSearch(""); }}
                             className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors cursor-pointer text-xs ${
                               selected.iso === country.iso
-                                ? "bg-[#d4a843]/10 text-[#d4a843]"
+                                ? "bg-[#4ADE80]/10 text-[#4ADE80]"
                                 : "text-white/60 hover:bg-white/5"
                             }`}
                           >
@@ -472,28 +451,28 @@ function Step1() {
                 className="w-full py-4 rounded-lg text-sm font-bold uppercase transition-all duration-300 disabled:opacity-50 cursor-pointer mt-2"
                 style={{
                   letterSpacing: "0.08em",
-                  background: "linear-gradient(135deg, #d4a843 0%, #e8c45a 50%, #d4a843 100%)",
-                  color: "#060b18",
-                  boxShadow: "0 4px 24px rgba(212, 168, 67, 0.3), 0 1px 0 rgba(255,255,255,0.15) inset",
+                  background: "linear-gradient(135deg, #4ADE80 0%, #86EFAC 50%, #4ADE80 100%)",
+                  color: "#0B0D10",
+                  boxShadow: "0 4px 24px rgba(74, 222, 128, 0.3), 0 1px 0 rgba(255,255,255,0.15) inset",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = "0 8px 40px rgba(212, 168, 67, 0.5), 0 1px 0 rgba(255,255,255,0.15) inset";
+                  e.currentTarget.style.boxShadow = "0 8px 40px rgba(74, 222, 128, 0.5), 0 1px 0 rgba(255,255,255,0.15) inset";
                   e.currentTarget.style.transform = "translateY(-1px)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = "0 4px 24px rgba(212, 168, 67, 0.3), 0 1px 0 rgba(255,255,255,0.15) inset";
+                  e.currentTarget.style.boxShadow = "0 4px 24px rgba(74, 222, 128, 0.3), 0 1px 0 rgba(255,255,255,0.15) inset";
                   e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
-                {pending ? "Enviando..." : "¡MOSTRAME CÓMO FUNCIONA!"}
+                {pending ? "Enviando..." : "QUIERO VER LA PRESENTACIÓN AHORA"}
               </button>
 
-              <div className="flex items-center justify-center gap-1.5 pt-1 text-white/20 text-[10px] text-center">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <span>Tus datos están protegidos. No compartimos tu información con terceros.</span>
-              </div>
+              <p
+                className="pt-1 text-[10px] md:text-[11px] text-center leading-relaxed"
+                style={{ color: "rgba(255,255,255,0.32)" }}
+              >
+                Acceso inmediato al video. Sin costo. Esta presentación no estará disponible de forma permanente.
+              </p>
             </form>
           </div>
         </div>
@@ -513,7 +492,7 @@ function Step1() {
           <p style={{ color: "rgba(255,255,255,0.2)" }}>
             <strong>IMPORTANTE:</strong> Las ganancias mostradas son aspiracionales. Los resultados varían según capacidad individual, ética laboral, experiencia y otros factores.
           </p>
-          <div className="flex flex-wrap gap-2 pt-0.5" style={{ color: "rgba(212, 168, 67, 0.3)" }}>
+          <div className="flex flex-wrap gap-2 pt-0.5" style={{ color: "rgba(74, 222, 128, 0.3)" }}>
             <a href="#" className="hover:underline">Disclaimer</a>
             <span style={{ color: "rgba(255,255,255,0.08)" }}>|</span>
             <a href="#" className="hover:underline">Privacidad</a>

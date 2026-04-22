@@ -19,6 +19,8 @@ interface LeadData {
     metadata?: Record<string, unknown>;
     /** Slug del usuario para asignación directa (bypassa la pool) */
     assignToSlug?: string;
+    /** UUID del usuario resuelto desde el slug — tiene prioridad sobre assignToSlug */
+    assignToUserId?: string;
 }
 interface LeadResponse {
     ok: boolean;

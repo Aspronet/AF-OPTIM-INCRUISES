@@ -1,37 +1,485 @@
 @import "tailwindcss";
 
+/* ============================================
+   LOCAL FONTS (Mona Sans + Brier)
+   ============================================ */
+@font-face {
+  font-family: "Mona Sans";
+  src: url("/fonts/MonaSansVF.woff2") format("woff2-variations");
+  font-weight: 200 900;
+  font-stretch: 75% 125%;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Brier";
+  src: url("/fonts/Brier-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Brier";
+  src: url("/fonts/Brier-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Paleta — dark warm */
+  --nexfy-bg: #0B0D10;
+  --nexfy-bg-elevated: #12161C;
+  --nexfy-surface: #171C24;
+  --nexfy-surface-hover: #1C222B;
+  --nexfy-border: #242B35;
+  --nexfy-border-strong: #323A46;
+
+  /* Texto — WCAG AA */
+  --nexfy-text: #F5F6F8;
+  --nexfy-text-secondary: #CDD1DA;
+  --nexfy-text-tertiary: #A0A8B5;
+  --nexfy-text-muted: #6A7180;
+  --nexfy-text-inverse: #0B0D10;
+
+  /* Accent */
+  --nexfy-accent: #4ADE80;
+  --nexfy-accent-hover: #22C55E;
+  --nexfy-accent-glow: rgba(74, 222, 128, 0.14);
+
+  /* Fonts */
+  --font-satoshi: "Satoshi", var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-satoshi);
+  --font-mona: var(--font-satoshi);
+  --font-serif-accent: var(--font-instrument-serif), "Instrument Serif", ui-serif, Georgia, serif;
+  --font-brier: var(--font-instrument-serif), ui-serif, Georgia, serif;
+
+  /* Legacy aliases (compat with existing funnel components) */
+  --background: var(--nexfy-bg);
+  --foreground: var(--nexfy-text);
+  --accent: var(--nexfy-accent);
+  --accent-light: var(--nexfy-accent-hover);
+  --surface: var(--nexfy-surface);
+
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-nexfy-bg: var(--nexfy-bg);
+  --color-nexfy-bg-elevated: var(--nexfy-bg-elevated);
+  --color-nexfy-surface: var(--nexfy-surface);
+  --color-nexfy-surface-hover: var(--nexfy-surface-hover);
+  --color-nexfy-border: var(--nexfy-border);
+  --color-nexfy-border-strong: var(--nexfy-border-strong);
+  --color-nexfy-text: var(--nexfy-text);
+  --color-nexfy-text-secondary: var(--nexfy-text-secondary);
+  --color-nexfy-text-tertiary: var(--nexfy-text-tertiary);
+  --color-nexfy-text-muted: var(--nexfy-text-muted);
+  --color-nexfy-text-inverse: var(--nexfy-text-inverse);
+  --color-nexfy-accent: var(--nexfy-accent);
+  --color-nexfy-accent-hover: var(--nexfy-accent-hover);
+  --color-background: var(--nexfy-bg);
+  --color-foreground: var(--nexfy-text);
+  --font-sans: var(--font-body);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-satoshi);
+  --font-serif: var(--font-brier);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Prevent horizontal overflow */
+html, body {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  background: var(--nexfy-bg);
+  color: var(--nexfy-text);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  font-feature-settings: "cv11", "ss01", "ss03";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar for dropdown */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
+a, button, [role="button"], input, textarea, select {
+  touch-action: manipulation;
 }
-.scrollbar-thin::-webkit-scrollbar-track {
+
+select option {
+  background-color: var(--nexfy-surface);
+  color: var(--nexfy-text);
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-top { padding-top: env(safe-area-inset-top); }
+}
+
+/* Prevent iOS zoom on input focus */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Smooth touch scrolling */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tap highlight removal */
+a, button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ============================================
+   CONTAINER & SPACING
+   ============================================ */
+.container-page {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+@media (min-width: 480px) { .container-page { padding: 0 24px; } }
+@media (min-width: 768px) { .container-page { padding: 0 48px; } }
+
+.section-y {
+  padding-top: 64px;
+  padding-bottom: 64px;
+}
+@media (min-width: 640px) { .section-y { padding-top: 96px; padding-bottom: 96px; } }
+@media (min-width: 768px) { .section-y { padding-top: 140px; padding-bottom: 140px; } }
+
+/* ============================================
+   TYPE SCALE
+   ============================================ */
+.t-display {
+  font-family: var(--font-satoshi);
+  font-weight: 700;
+  font-size: clamp(44px, 5.8vw, 76px);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+}
+.t-display-sm {
+  font-family: var(--font-satoshi);
+  font-weight: 700;
+  font-size: clamp(32px, 4vw, 54px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.t-h1 {
+  font-family: var(--font-satoshi);
+  font-weight: 700;
+  font-size: clamp(26px, 3vw, 40px);
+  line-height: 1.15;
+  letter-spacing: -0.024em;
+}
+.t-h2 {
+  font-family: var(--font-satoshi);
+  font-weight: 600;
+  font-size: clamp(19px, 1.7vw, 24px);
+  line-height: 1.3;
+  letter-spacing: -0.018em;
+}
+.t-lead {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: clamp(17px, 1.1vw, 19px);
+  line-height: 1.55;
+  letter-spacing: -0.011em;
+}
+.t-body {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.65;
+  letter-spacing: -0.005em;
+}
+.t-small {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.55;
+  letter-spacing: -0.003em;
+}
+.t-eyebrow {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+  color: var(--nexfy-accent);
+}
+.t-label {
+  font-family: var(--font-geist-mono);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nexfy-text-tertiary);
+}
+
+/* ============================================
+   BRANDING ACCENTS
+   ============================================ */
+.accent {
+  font-family: var(--font-instrument-serif);
+  font-weight: 400;
+  font-style: italic;
+  color: var(--nexfy-accent);
+  letter-spacing: 0;
+}
+.accent-italic {
+  font-family: var(--font-instrument-serif);
+  font-weight: 400;
+  font-style: italic;
+  color: var(--nexfy-text);
+  letter-spacing: 0;
+  padding-right: 0.05em;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-family: var(--font-mona);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: -0.005em;
+  border-radius: 10px;
+  border: 1px solid var(--nexfy-border-strong);
+  color: var(--nexfy-text);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+  white-space: nowrap;
+}
+.btn:hover {
+  background: var(--nexfy-surface);
+  border-color: var(--nexfy-text-tertiary);
+}
+.btn--primary {
+  background: var(--nexfy-accent);
+  color: var(--nexfy-text-inverse);
+  border-color: var(--nexfy-accent);
+  font-weight: 600;
+}
+.btn--primary:hover {
+  background: var(--nexfy-accent-hover);
+  border-color: var(--nexfy-accent-hover);
+}
+.btn--ghost {
+  border-color: transparent;
   background: transparent;
 }
+.btn--ghost:hover {
+  background: var(--nexfy-surface);
+  border-color: var(--nexfy-border);
+}
+.btn--lg {
+  padding: 12px 22px;
+  font-size: 15px;
+}
+
+/* ============================================
+   LINKS
+   ============================================ */
+.link-underline {
+  position: relative;
+  color: var(--nexfy-text);
+  transition: color 0.18s ease;
+}
+.link-underline::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.3;
+  transition: opacity 0.18s ease;
+}
+.link-underline:hover::after {
+  opacity: 1;
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+.card {
+  background: var(--nexfy-bg-elevated);
+  border: 1px solid var(--nexfy-border);
+  border-radius: 14px;
+  padding: 28px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.card:hover {
+  border-color: var(--nexfy-border-strong);
+  background: var(--nexfy-surface);
+}
+.card-flat {
+  border: 1px solid var(--nexfy-border);
+  border-radius: 14px;
+  padding: 28px;
+  background: transparent;
+}
+
+/* ============================================
+   INPUTS
+   ============================================ */
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--nexfy-text);
+  background: var(--nexfy-bg-elevated);
+  border: 1px solid var(--nexfy-border);
+  border-radius: 10px;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--nexfy-accent);
+  background: var(--nexfy-surface);
+}
+.input::placeholder {
+  color: var(--nexfy-text-muted);
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ============================================
+   DOTS & INDICATORS
+   ============================================ */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.dot-live {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--nexfy-accent);
+  box-shadow: 0 0 0 3px var(--nexfy-accent-glow);
+  animation: pulse-subtle 2.4s ease-in-out infinite;
+}
+
+/* ============================================
+   BADGE / PILL
+   ============================================ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-family: var(--font-mona);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  border-radius: 999px;
+  border: 1px solid var(--nexfy-border);
+  background: var(--nexfy-bg-elevated);
+  color: var(--nexfy-text-secondary);
+}
+
+/* ============================================
+   GLASS HEADER
+   ============================================ */
+.glass-header {
+  background: rgba(11, 13, 16, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 8px 32px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.glass-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.glass-header--scrolled {
+  background: rgba(11, 13, 16, 0.75);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.page-offset {
+  padding-top: 80px;
+}
+
+/* ============================================
+   SUBTLE BACKGROUND GRID
+   ============================================ */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ============================================
+   DIVIDERS
+   ============================================ */
+.hr-soft {
+  border: none;
+  border-top: 1px solid var(--nexfy-border);
+}
+
+/* ============================================
+   PROSE & SCROLLBAR
+   ============================================ */
+.prose p + p { margin-top: 20px; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-thin::-webkit-scrollbar { width: 6px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 3px;
@@ -40,17 +488,114 @@ body {
   background: rgba(255, 255, 255, 0.25);
 }
 
+/* ============================================
+   FUNNEL-SPECIFIC (VSL, steps) — re-tinted to Nexfy green
+   ============================================ */
+
+/* VSL CTA button — compact on mobile */
+@media (max-width: 640px) {
+  .vsl-cta-btn {
+    font-size: 13px !important;
+    padding: 12px 24px !important;
+  }
+}
+
+/* Agendamiento responsive */
+@media (min-width: 768px) {
+  .agenda-headline { font-size: 32px !important; }
+  .agenda-subheadline { font-size: 17px !important; }
+  .agenda-context { font-size: 15px !important; padding: 12px 20px !important; }
+}
+
 /* Dropdown animation */
 @keyframes dropdown-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .animate-in {
   animation: dropdown-in 0.2s ease-out;
+}
+
+/* VSL page animations */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes play-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 40px rgba(74, 222, 128, 0.15);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 60px rgba(74, 222, 128, 0.3);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes badge-shine {
+  0%, 90%, 100% { background-position: -200% center; }
+  50% { background-position: 200% center; }
+}
+
+.vsl-fade-1 { animation: fade-up 0.6s ease-out 0.1s both; }
+.vsl-fade-2 { animation: fade-up 0.6s ease-out 0.25s both; }
+.vsl-fade-3 { animation: fade-up 0.6s ease-out 0.4s both; }
+.vsl-fade-4 { animation: fade-up 0.6s ease-out 0.55s both; }
+.vsl-fade-5 { animation: fade-up 0.6s ease-out 0.7s both; }
+.vsl-fade-6 { animation: fade-up 0.6s ease-out 0.85s both; }
+
+@keyframes bounceDown {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+
+.paso3-arrow {
+  color: var(--nexfy-accent);
+  animation: bounceDown 1.5s ease-in-out infinite;
+}
+
+.play-pulse {
+  animation: play-pulse 2.5s ease-in-out infinite;
+}
+
+.btn-shimmer {
+  background-size: 200% 100%;
+  background-image: linear-gradient(
+    110deg,
+    #4ADE80 0%,
+    #4ADE80 35%,
+    #86EFAC 50%,
+    #4ADE80 65%,
+    #4ADE80 100%
+  );
+  animation: shimmer 4s ease-in-out infinite;
+}
+
+.badge-shine {
+  background-size: 200% 100%;
+  background-image: linear-gradient(
+    110deg,
+    rgba(74, 222, 128, 0.08) 0%,
+    rgba(74, 222, 128, 0.08) 35%,
+    rgba(74, 222, 128, 0.2) 50%,
+    rgba(74, 222, 128, 0.08) 65%,
+    rgba(74, 222, 128, 0.08) 100%
+  );
+  animation: badge-shine 5s ease-in-out infinite;
+}
+
+/* ============================================
+   REDUCED MOTION
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

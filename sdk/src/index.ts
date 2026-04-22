@@ -23,6 +23,8 @@ export interface LeadData {
   metadata?: Record<string, unknown>;
   /** Slug del usuario para asignación directa (bypassa la pool) */
   assignToSlug?: string;
+  /** UUID del usuario resuelto desde el slug — tiene prioridad sobre assignToSlug */
+  assignToUserId?: string;
 }
 
 export interface LeadResponse {
@@ -94,6 +96,7 @@ export class AsproFunnel {
         source: data.source || "landing",
         metadata: data.metadata,
         assign_to_slug: data.assignToSlug || undefined,
+        assign_to_user_id: data.assignToUserId || undefined,
       }),
     });
 

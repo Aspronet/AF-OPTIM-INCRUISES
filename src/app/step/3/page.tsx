@@ -395,9 +395,9 @@ export default function Step3() {
   // ── Loading ──
   if (initialLoading) {
     return (
-      <main className="min-h-screen flex items-center justify-center" style={{ background: "#060b18" }}>
+      <main className="min-h-screen flex items-center justify-center" style={{ background: "#0B0D10" }}>
         <div className="flex flex-col items-center gap-3">
-          <div className="w-5 h-5 border-2 border-white/10 border-t-[#d4a843] rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-white/10 border-t-[#4ADE80] rounded-full animate-spin" />
           <span className="text-[13px]" style={{ color: "rgba(255,255,255,0.35)" }}>Cargando disponibilidad...</span>
         </div>
       </main>
@@ -414,7 +414,7 @@ export default function Step3() {
           className="w-full flex items-center justify-between px-5 py-4 rounded-lg text-sm cursor-pointer transition-all"
           style={{
             background: "rgba(255,255,255,0.05)",
-            border: `1px solid ${countryOpen ? "rgba(212, 168, 67, 0.5)" : "rgba(255,255,255,0.1)"}`,
+            border: `1px solid ${countryOpen ? "rgba(74, 222, 128, 0.5)" : "rgba(255,255,255,0.1)"}`,
             color: answers[idx] ? "white" : "rgba(255,255,255,0.25)",
           }}
         >
@@ -439,7 +439,7 @@ export default function Step3() {
                 <>
                   {filteredCountries.priority.map((c) => (
                     <button key={c.name} onClick={() => { setAnswers((prev) => ({ ...prev, [idx]: c.name })); setCountryOpen(false); setCountrySearch(""); }}
-                      className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors cursor-pointer text-sm ${answers[idx] === c.name ? "bg-[#d4a843]/10 text-[#d4a843]" : "text-white/70 hover:bg-white/5"}`}>
+                      className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors cursor-pointer text-sm ${answers[idx] === c.name ? "bg-[#4ADE80]/10 text-[#4ADE80]" : "text-white/70 hover:bg-white/5"}`}>
                       <span className="text-base">{c.flag}</span><span>{c.name}</span>
                     </button>
                   ))}
@@ -448,7 +448,7 @@ export default function Step3() {
               )}
               {filteredCountries.other.map((c) => (
                 <button key={c.name} onClick={() => { setAnswers((prev) => ({ ...prev, [idx]: c.name })); setCountryOpen(false); setCountrySearch(""); }}
-                  className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors cursor-pointer text-sm ${answers[idx] === c.name ? "bg-[#d4a843]/10 text-[#d4a843]" : "text-white/60 hover:bg-white/5"}`}>
+                  className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors cursor-pointer text-sm ${answers[idx] === c.name ? "bg-[#4ADE80]/10 text-[#4ADE80]" : "text-white/60 hover:bg-white/5"}`}>
                   <span className="text-base">{c.flag}</span><span>{c.name}</span>
                 </button>
               ))}
@@ -464,9 +464,9 @@ export default function Step3() {
 
   // ── Render ──
   return (
-    <main className="min-h-screen flex flex-col relative" style={{ background: "linear-gradient(160deg, #060b18 0%, #0a1230 40%, #0d1a3a 65%, #060b18 100%)" }}>
+    <main className="min-h-screen flex flex-col relative" style={{ background: "linear-gradient(160deg, #0B0D10 0%, #12161C 40%, #0d1a3a 65%, #0B0D10 100%)" }}>
       {/* Background depth */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 70% 40% at 50% 30%, rgba(212, 168, 67, 0.02) 0%, transparent 70%)" }} />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 70% 40% at 50% 30%, rgba(74, 222, 128, 0.02) 0%, transparent 70%)" }} />
       <div className="absolute inset-0 pointer-events-none opacity-[0.025]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`, backgroundRepeat: "repeat", backgroundSize: "128px 128px" }} />
 
       {/* ── CONFIRMED ── */}
@@ -476,11 +476,16 @@ export default function Step3() {
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full" style={{ background: "rgba(34, 197, 94, 0.1)" }}>
               <svg className="w-10 h-10" style={{ color: "#22c55e" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
             </div>
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-3" style={{ lineHeight: "1.15", letterSpacing: "-0.015em" }}>¡Listo! Tu Llamada Está Confirmada.</h2>
-            <p className="text-sm mb-8 leading-relaxed" style={{ color: "rgba(255,255,255,0.5)" }}>Vas a recibir un mensaje por WhatsApp con los detalles. Prepara tus preguntas — vamos a aprovechar cada minuto. ¡Nos vemos en la llamada!</p>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-3" style={{ lineHeight: "1.2", letterSpacing: "-0.015em" }}>Tu evaluación con <span style={{ color: "#4ADE80" }}>Nexy</span> está confirmada.</h2>
+            <p className="text-sm mb-4 leading-relaxed" style={{ color: "rgba(255,255,255,0.7)" }}>
+              <span className="mr-1">📲</span>Vas a recibir una confirmación por WhatsApp. Asegúrate de atender la llamada en el horario que elegiste.
+            </p>
+            <p className="text-[13px] mb-8 leading-relaxed text-left rounded-lg px-4 py-3" style={{ color: "rgba(255,255,255,0.75)", background: "rgba(248, 113, 113, 0.06)", border: "1px solid rgba(248, 113, 113, 0.2)" }}>
+              <strong className="font-semibold" style={{ color: "#F87171" }}>Importante:</strong> si no atiendes la llamada, tu lugar se reasigna automáticamente. No hay segundas oportunidades para el mismo horario.
+            </p>
             <div className="text-left rounded-xl p-5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex flex-col gap-3">
-                <div className="flex justify-between items-start"><span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Fecha y hora</span><span className="text-[13px] font-medium text-right capitalize text-white">{confirmedBooking.date}<br /><span style={{ color: "#d4a843" }}>{formatSlotTime(confirmedBooking.time)}</span></span></div>
+                <div className="flex justify-between items-start"><span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Fecha y hora</span><span className="text-[13px] font-medium text-right capitalize text-white">{confirmedBooking.date}<br /><span style={{ color: "#4ADE80" }}>{formatSlotTime(confirmedBooking.time)}</span></span></div>
                 <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
                 <div className="flex justify-between"><span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Duración</span><span className="text-[13px] font-medium text-white">{confirmedBooking.duration} min</span></div>
                 <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
@@ -503,50 +508,34 @@ export default function Step3() {
             <div className="h-[30px]" />
 
             {/* Headline */}
-            <div className="text-center mb-6 md:mb-8 vsl-fade-1">
+            <div className="text-center mb-5 md:mb-6 vsl-fade-1">
               <h1
                 className="agenda-headline font-bold text-white mb-3"
-                style={{ fontSize: "26px", lineHeight: "1.15", letterSpacing: "-0.015em", textShadow: "0 2px 20px rgba(0,0,0,0.3)" }}
+                style={{ fontSize: "30px", lineHeight: "1.15", letterSpacing: "-0.02em", textShadow: "0 2px 20px rgba(0,0,0,0.3)" }}
               >
-                ¡Bien! Estás A Un Paso De Tu Llamada De Validación.
+                Agenda tu evaluación con <span style={{ color: "#4ADE80" }}>Nexy</span>
               </h1>
               <p
-                className="agenda-subheadline leading-relaxed"
-                style={{ fontSize: "15px", color: "rgba(255,255,255,0.85)", marginTop: "12px" }}
+                className="agenda-subheadline leading-relaxed max-w-[640px] mx-auto"
+                style={{ fontSize: "15px", color: "rgba(255,255,255,0.7)", marginTop: "12px" }}
               >
-                Antes de agendar, necesitamos conocerte. Responde estas preguntas rápidas (menos de 2 minutos) y luego elige tu horario.
+                Nexy es nuestro agente de inteligencia artificial. Te va a llamar en el horario que elijas para evaluar si tu perfil encaja con la Certificación Profesional en Sistemas de Ventas con IA.
               </p>
-              <div
-                className="agenda-context text-left leading-relaxed italic"
-                style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", marginTop: "8px", padding: "10px 16px", borderLeft: "2px solid rgba(212, 168, 67, 0.5)", background: "rgba(255,255,255,0.03)", borderRadius: "0 8px 8px 0" }}
-              >
-                ¿Por qué te pedimos esto? Porque no trabajamos con todo el mundo. Queremos que esta conversación sea útil para ti y que tu tiempo esté bien invertido.
-              </div>
             </div>
 
-            {/* Video */}
-            <div className="vsl-fade-2 mb-8 md:mb-10">
-              <div className="relative w-full aspect-video rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 25px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset, 0 0 80px rgba(212, 168, 67, 0.04)" }}>
-                <div className="absolute top-0 left-0 w-1/2 h-1/3 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%)" }} />
-                <div className="absolute inset-0 flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(10, 18, 48, 0.9) 0%, rgba(6, 11, 24, 0.95) 100%)" }}>
-                  <button className="play-pulse flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full cursor-pointer" style={{ background: "rgba(212, 168, 67, 0.12)", border: "2px solid rgba(212, 168, 67, 0.4)" }}>
-                    <div className="w-0 h-0 border-t-[10px] border-t-transparent border-l-[18px] border-b-[10px] border-b-transparent ml-1" style={{ borderLeftColor: "#d4a843" }} />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* PASO 3 Banner */}
-            <div className="vsl-fade-3 mb-8 md:mb-10 flex flex-col items-center">
-              <div className="flex items-center justify-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 rounded-xl w-full" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212, 168, 67, 0.2)", backdropFilter: "blur(8px)", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
-                <div className="flex items-center justify-center w-9 h-9 rounded-full shrink-0 text-[15px] font-bold" style={{ background: "linear-gradient(135deg, #d4a843, #e8c45a)", color: "#060b18" }}>3</div>
-                <span className="text-[12px] md:text-[14px] font-bold uppercase" style={{ letterSpacing: "0.08em", color: "#d4a843" }}>
-                  Rellena El Formulario Y Elige Tu Horario De Cita
-                </span>
-              </div>
-              <svg className="paso3-arrow mt-3" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
+            {/* Bloque de urgencia */}
+            <div
+              className="vsl-fade-2 mb-8 md:mb-10 text-left rounded-xl px-5 py-4"
+              style={{
+                background: "rgba(251, 191, 36, 0.06)",
+                border: "1px solid rgba(251, 191, 36, 0.25)",
+              }}
+            >
+              <p className="text-[13px] md:text-[14px] leading-relaxed" style={{ color: "rgba(255,255,255,0.85)" }}>
+                <span className="mr-1.5">⏱</span>
+                <strong className="font-semibold" style={{ color: "#FCD34D" }}>Los horarios disponibles se asignan por orden de llegada.</strong>{" "}
+                Si el horario que quieres ya no está disponible cuando vuelvas, vas a tener que esperar a la próxima apertura de agenda.
+              </p>
             </div>
 
             {/* ── 7 Questions ── */}
@@ -557,9 +546,9 @@ export default function Step3() {
                     {/* Separator before Q7 */}
                     {idx === 6 && (
                       <div className="flex items-center gap-4 mb-5 -mt-2">
-                        <div className="flex-1 h-px" style={{ background: "rgba(212, 168, 67, 0.2)" }} />
-                        <span className="text-[10px] tracking-widest uppercase font-semibold" style={{ color: "rgba(212, 168, 67, 0.6)" }}>Última Pregunta</span>
-                        <div className="flex-1 h-px" style={{ background: "rgba(212, 168, 67, 0.2)" }} />
+                        <div className="flex-1 h-px" style={{ background: "rgba(74, 222, 128, 0.2)" }} />
+                        <span className="text-[10px] tracking-widest uppercase font-semibold" style={{ color: "rgba(74, 222, 128, 0.6)" }}>Última Pregunta</span>
+                        <div className="flex-1 h-px" style={{ background: "rgba(74, 222, 128, 0.2)" }} />
                       </div>
                     )}
 
@@ -570,7 +559,7 @@ export default function Step3() {
                       <input type="text" value={answers[idx] || ""} onChange={(e) => setAnswers((prev) => ({ ...prev, [idx]: e.target.value }))} placeholder={q.placeholder}
                         className="w-full px-5 py-4 rounded-lg text-white placeholder-white/25 outline-none text-sm transition-all duration-200"
                         style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(212, 168, 67, 0.5)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(212, 168, 67, 0.08)"; }}
+                        onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(74, 222, 128, 0.5)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(74, 222, 128, 0.08)"; }}
                         onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.boxShadow = "none"; }}
                       />
                     )}
@@ -587,12 +576,12 @@ export default function Step3() {
                             <button key={opt} onClick={() => setAnswers((prev) => ({ ...prev, [idx]: opt }))}
                               className="w-full text-left px-5 py-4 rounded-xl text-sm transition-all duration-200 cursor-pointer flex items-center gap-3"
                               style={{
-                                background: isSelected ? "rgba(212, 168, 67, 0.1)" : "rgba(255,255,255,0.03)",
-                                border: `1px solid ${isSelected ? "rgba(212, 168, 67, 0.45)" : "rgba(255,255,255,0.08)"}`,
-                                color: isSelected ? "#d4a843" : "rgba(255,255,255,0.7)",
+                                background: isSelected ? "rgba(74, 222, 128, 0.1)" : "rgba(255,255,255,0.03)",
+                                border: `1px solid ${isSelected ? "rgba(74, 222, 128, 0.45)" : "rgba(255,255,255,0.08)"}`,
+                                color: isSelected ? "#4ADE80" : "rgba(255,255,255,0.7)",
                               }}>
-                              <div className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all" style={{ borderColor: isSelected ? "#d4a843" : "rgba(255,255,255,0.15)", background: isSelected ? "#d4a843" : "transparent" }}>
-                                {isSelected && <svg className="w-3 h-3 text-[#060b18]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                              <div className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all" style={{ borderColor: isSelected ? "#4ADE80" : "rgba(255,255,255,0.15)", background: isSelected ? "#4ADE80" : "transparent" }}>
+                                {isSelected && <svg className="w-3 h-3 text-[#0B0D10]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                               </div>
                               <span>{opt}</span>
                             </button>
@@ -608,9 +597,9 @@ export default function Step3() {
                   <div className="pt-6 pb-2">
                     <button onClick={handleContinue} disabled={!allAnswered}
                       className="w-full py-4 rounded-xl text-sm font-bold uppercase cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                      style={{ letterSpacing: "0.08em", color: "#060b18", backgroundColor: "#d4a843", boxShadow: allAnswered ? "0 6px 30px rgba(212, 168, 67, 0.4)" : "none", transition: "all 0.25s ease" }}
-                      onMouseEnter={(e) => { if (allAnswered) { e.currentTarget.style.boxShadow = "0 10px 50px rgba(212, 168, 67, 0.6)"; e.currentTarget.style.transform = "translateY(-2px) scale(1.02)"; } }}
-                      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = allAnswered ? "0 6px 30px rgba(212, 168, 67, 0.4)" : "none"; e.currentTarget.style.transform = "translateY(0) scale(1)"; }}>
+                      style={{ letterSpacing: "0.08em", color: "#0B0D10", backgroundColor: "#4ADE80", boxShadow: allAnswered ? "0 6px 30px rgba(74, 222, 128, 0.4)" : "none", transition: "all 0.25s ease" }}
+                      onMouseEnter={(e) => { if (allAnswered) { e.currentTarget.style.boxShadow = "0 10px 50px rgba(74, 222, 128, 0.6)"; e.currentTarget.style.transform = "translateY(-2px) scale(1.02)"; } }}
+                      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = allAnswered ? "0 6px 30px rgba(74, 222, 128, 0.4)" : "none"; e.currentTarget.style.transform = "translateY(0) scale(1)"; }}>
                       CONTINUAR
                     </button>
                   </div>
@@ -637,7 +626,7 @@ export default function Step3() {
                     <div className="flex flex-col gap-3 sm:gap-4 md:w-56 shrink-0 p-4 sm:p-5 md:p-6 border-b md:border-b-0 md:border-r" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
                       {hostName && (
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold" style={{ background: "linear-gradient(135deg, #d4a843, #e8c45a)", color: "#060b18" }}>
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold" style={{ background: "linear-gradient(135deg, #4ADE80, #86EFAC)", color: "#0B0D10" }}>
                             {hostName.split(" ").map((w) => w[0]?.toUpperCase() || "").join("").slice(0, 2)}
                           </div>
                           <div className="flex flex-col"><span className="text-[13px] font-medium text-white">{hostName}</span><span className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>Tu asesor</span></div>
@@ -647,7 +636,7 @@ export default function Step3() {
                         <div className="flex items-center gap-2"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span>{durationMin} min</span></div>
                         <div className="flex items-center gap-2"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" /></svg><span>{leadTimezone.replace(/_/g, " ")}</span></div>
                         {selectedDate && selectedSlot && (
-                          <div className="flex items-center gap-2 pt-1"><svg className="w-3.5 h-3.5" style={{ color: "#d4a843" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><span className="font-medium capitalize" style={{ color: "#d4a843" }}>{formatDate(selectedDate)} · {formatSlotTime(selectedSlot)}</span></div>
+                          <div className="flex items-center gap-2 pt-1"><svg className="w-3.5 h-3.5" style={{ color: "#4ADE80" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><span className="font-medium capitalize" style={{ color: "#4ADE80" }}>{formatDate(selectedDate)} · {formatSlotTime(selectedSlot)}</span></div>
                         )}
                       </div>
                     </div>
@@ -678,7 +667,7 @@ export default function Step3() {
                               return (
                                 <button key={day.toISOString()} onClick={() => !isDisabled && handleDateSelect(day)} disabled={isDisabled}
                                   className="flex h-8 w-8 sm:h-9 sm:w-9 cursor-pointer items-center justify-center rounded-full border-none text-[11px] sm:text-[12px] font-medium transition-all disabled:cursor-not-allowed disabled:opacity-20"
-                                  style={{ backgroundColor: isSelected ? "#d4a843" : isToday ? "rgba(212, 168, 67, 0.1)" : "transparent", color: isSelected ? "#060b18" : !isCurrentMonth ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.7)" }}>
+                                  style={{ backgroundColor: isSelected ? "#4ADE80" : isToday ? "rgba(74, 222, 128, 0.1)" : "transparent", color: isSelected ? "#0B0D10" : !isCurrentMonth ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.7)" }}>
                                   {day.getDate()}
                                 </button>
                               );
@@ -692,7 +681,7 @@ export default function Step3() {
                             <h3 className="text-[13px] font-bold text-white">Elige un horario</h3>
                             <p className="text-[11px] capitalize" style={{ color: "rgba(255,255,255,0.4)" }}>{formatDate(selectedDate)}</p>
                             {slotsLoading ? (
-                              <div className="flex flex-1 items-center justify-center py-8"><div className="w-5 h-5 border-2 border-white/10 border-t-[#d4a843] rounded-full animate-spin" /></div>
+                              <div className="flex flex-1 items-center justify-center py-8"><div className="w-5 h-5 border-2 border-white/10 border-t-[#4ADE80] rounded-full animate-spin" /></div>
                             ) : slots.length === 0 ? (
                               <div className="flex flex-col items-center justify-center gap-2 py-8"><span className="text-[11px] text-center" style={{ color: "rgba(255,255,255,0.25)" }}>No hay horarios disponibles</span></div>
                             ) : (
@@ -700,7 +689,7 @@ export default function Step3() {
                                 {slots.map((slot) => {
                                   const isSlotSelected = selectedSlot === slot;
                                   return (<button key={slot} onClick={() => setSelectedSlot(isSlotSelected ? null : slot)} className="cursor-pointer rounded-lg py-2.5 text-center text-[12px] font-semibold transition-all"
-                                    style={{ border: `1px solid ${isSlotSelected ? "#d4a843" : "rgba(255,255,255,0.1)"}`, backgroundColor: isSlotSelected ? "#d4a843" : "rgba(255,255,255,0.03)", color: isSlotSelected ? "#060b18" : "rgba(255,255,255,0.7)" }}>
+                                    style={{ border: `1px solid ${isSlotSelected ? "#4ADE80" : "rgba(255,255,255,0.1)"}`, backgroundColor: isSlotSelected ? "#4ADE80" : "rgba(255,255,255,0.03)", color: isSlotSelected ? "#0B0D10" : "rgba(255,255,255,0.7)" }}>
                                     {formatSlotTime(slot)}
                                   </button>);
                                 })}
@@ -708,10 +697,10 @@ export default function Step3() {
                             )}
                             {selectedSlot && (
                               <button onClick={handleConfirm} disabled={confirming}
-                                className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-none py-3 text-[11px] font-bold uppercase text-[#060b18] transition-all disabled:cursor-not-allowed disabled:opacity-50"
-                                style={{ letterSpacing: "0.06em", backgroundColor: "#d4a843", boxShadow: "0 6px 30px rgba(212, 168, 67, 0.4)" }}>
-                                {confirming && <div className="w-4 h-4 border-2 border-[#060b18]/30 border-t-[#060b18] rounded-full animate-spin" />}
-                                CONFIRMAR MI LLAMADA
+                                className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-none py-3 text-[11px] font-bold uppercase text-[#0B0D10] transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                                style={{ letterSpacing: "0.06em", backgroundColor: "#4ADE80", boxShadow: "0 6px 30px rgba(74, 222, 128, 0.4)" }}>
+                                {confirming && <div className="w-4 h-4 border-2 border-[#0B0D10]/30 border-t-[#0B0D10] rounded-full animate-spin" />}
+                                CONFIRMAR MI EVALUACIÓN
                               </button>
                             )}
                             {bookingError && (
@@ -724,6 +713,19 @@ export default function Step3() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Texto de refuerzo */}
+                <div className="mt-8 md:mt-10 max-w-[680px] mx-auto space-y-4 text-[14px] md:text-[15px] leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
+                  <p>
+                    La evaluación dura entre <strong className="font-semibold text-white/90">5 y 7 minutos</strong>. No es una llamada de ventas. <span style={{ color: "#4ADE80" }}>Es un filtro real.</span>
+                  </p>
+                  <p>
+                    Nexy va a hacerte preguntas sobre tu situación actual, tu interés y tu nivel de compromiso. Si tu perfil encaja, accedes al portal exclusivo de la Certificación. Si no encaja, te lo decimos y no avanzamos.
+                  </p>
+                  <p className="italic" style={{ color: "rgba(255,255,255,0.5)" }}>
+                    No todo el mundo pasa esta etapa. Eso es intencional.
+                  </p>
                 </div>
               </div>
             )}

@@ -8,9 +8,12 @@ import type { VideoEventPayload } from "@/components/VideoPlayer";
 
 // ─── CONFIGURATION ──────────────────────────────────────
 // Change these to swap the video for each funnel
-const VIDEO_URL = "https://incruises.b-cdn.net/in%20cruises%201.mov";
+const VIDEO_URL = "https://vz-2228bbe6-62d.b-cdn.net/2f9d378c-0bf6-4c91-9d9e-4bcb3fa53927/playlist.m3u8";
 const VIDEO_POSTER = "";
-const VIDEO_NAME = "VSL Principal"; // name shown in lead_activity metadata
+const VIDEO_NAME = "VSL Nexfy Certificación"; // name shown in lead_activity metadata
+
+// TODO: replace with WhatsApp link to Nexy agent once available
+const HABLAR_CON_NEXY_HREF = "/step/3?intent=call-now";
 // ────────────────────────────────────────────────────────
 
 export default function Step2Page() {
@@ -109,9 +112,9 @@ function Step2() {
     return (
       <main
         className="h-screen flex items-center justify-center"
-        style={{ background: "#060b18" }}
+        style={{ background: "#0B0D10" }}
       >
-        <div className="w-6 h-6 border-2 border-white/10 border-t-[#d4a843] rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-white/10 border-t-[#4ADE80] rounded-full animate-spin" />
       </main>
     );
   }
@@ -120,14 +123,14 @@ function Step2() {
     <main
       className="min-h-screen flex flex-col overflow-x-hidden relative"
       style={{
-        background: "linear-gradient(160deg, #060b18 0%, #0a1230 40%, #0d1a3a 65%, #060b18 100%)",
+        background: "linear-gradient(160deg, #0B0D10 0%, #12161C 40%, #0d1a3a 65%, #0B0D10 100%)",
       }}
     >
       {/* Background depth layers */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse 60% 50% at 50% 55%, rgba(212, 168, 67, 0.03) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse 60% 50% at 50% 55%, rgba(74, 222, 128, 0.03) 0%, transparent 70%)",
         }}
       />
       <div
@@ -144,80 +147,42 @@ function Step2() {
         <div className="w-full max-w-[740px]">
           <div className="hidden md:block h-[60px]" />
 
-          {/* Badge — VIDEO EXCLUSIVO */}
-          <div className="text-center mb-2.5 md:mb-3 vsl-fade-1">
-            <div
-              className="badge-shine inline-flex items-center px-3 py-1.5 rounded-md"
+          {/* Pre-headline */}
+          <div className="text-center mb-4 md:mb-5 vsl-fade-1">
+            <p
+              className="text-[12px] md:text-[13px] font-semibold uppercase max-w-[640px] mx-auto"
               style={{
-                border: "1px solid rgba(212, 168, 67, 0.3)",
+                letterSpacing: "0.08em",
+                color: "#4ADE80",
+                lineHeight: "1.5",
               }}
             >
-              <span
-                className="text-[10px] md:text-[11px] font-semibold uppercase"
-                style={{
-                  letterSpacing: "0.15em",
-                  color: "#d4a843",
-                }}
-              >
-                Video Exclusivo
-              </span>
-            </div>
+              Estás a punto de ver algo que el 97% de las personas que hablan de IA no saben que existe.
+            </p>
           </div>
 
           {/* Headline */}
           <div className="text-center mb-4 md:mb-5 vsl-fade-2">
             <h1
-              className="text-[1.35rem] sm:text-[1.6rem] md:text-[2.1rem] lg:text-[2.4rem] font-bold text-white max-w-[700px] mx-auto"
+              className="text-[1.6rem] sm:text-[1.9rem] md:text-[2.4rem] lg:text-[2.7rem] font-bold text-white max-w-[760px] mx-auto"
               style={{
-                lineHeight: "1.2",
-                letterSpacing: "-0.015em",
+                lineHeight: "1.15",
+                letterSpacing: "-0.02em",
                 textShadow: "0 2px 20px rgba(0,0,0,0.3)",
               }}
             >
-              Cómo Construir Un Negocio Global En Una Industria Multimillonaria Sin Crear Producto, Sin Saber De Marketing Y Con Un Sistema Que Te Guía Paso A Paso.
+              Certificación Profesional en Sistemas de Ventas con IA — <span style={{ color: "#4ADE80" }}>Nexfy</span>
             </h1>
           </div>
 
-          {/* PASO 1 indicator */}
-          <div className="flex items-center justify-center gap-2.5 mb-3 vsl-fade-3">
-            <div
-              className="flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-bold shrink-0"
-              style={{
-                background: "linear-gradient(135deg, #d4a843, #e8c45a)",
-                color: "#060b18",
-              }}
+          {/* Subheadline */}
+          <div className="text-center mb-6 md:mb-7 vsl-fade-3">
+            <p
+              className="text-[14px] md:text-[16px] leading-relaxed max-w-[680px] mx-auto"
+              style={{ color: "rgba(255,255,255,0.62)" }}
             >
-              1
-            </div>
-            <span
-              className="text-[11px] font-semibold uppercase"
-              style={{
-                letterSpacing: "0.1em",
-                color: "#d4a843",
-              }}
-            >
-              Mira El Video
-            </span>
-            <div className="hidden md:block w-12 h-px" style={{ background: "rgba(212, 168, 67, 0.2)" }} />
-            <div
-              className="hidden md:flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-bold shrink-0"
-              style={{
-                background: "transparent",
-                border: "1px solid rgba(255,255,255,0.15)",
-                color: "rgba(255,255,255,0.3)",
-              }}
-            >
-              2
-            </div>
-            <span
-              className="hidden md:inline text-[11px] font-semibold uppercase"
-              style={{
-                letterSpacing: "0.1em",
-                color: "rgba(255,255,255,0.25)",
-              }}
-            >
-              Agenda Tu Cita
-            </span>
+              Mira el video completo. Lo que vas a ver no es una promesa. Es el sistema funcionando en tiempo real. Y al final vas a entender por qué esta puede ser la decisión profesional más importante que tomes este año.
+            </p>
           </div>
 
           {/* Video player */}
@@ -232,62 +197,91 @@ function Step2() {
             />
           </div>
 
-          {/* PASO 2 indicator */}
-          <div className="flex items-center justify-center gap-2.5 mb-3 vsl-fade-5">
-            <div
-              className="flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-bold shrink-0"
+          {/* CTA Headline */}
+          <div className="text-center mb-3 md:mb-4 vsl-fade-5">
+            <h2
+              className="text-[1.15rem] sm:text-[1.3rem] md:text-[1.55rem] font-bold text-white max-w-[680px] mx-auto"
               style={{
-                background: "linear-gradient(135deg, #d4a843, #e8c45a)",
-                color: "#060b18",
+                lineHeight: "1.25",
+                letterSpacing: "-0.015em",
               }}
             >
-              2
-            </div>
-            <span
-              className="text-[11px] font-semibold uppercase"
-              style={{
-                letterSpacing: "0.1em",
-                color: "#d4a843",
-              }}
-            >
-              Agenda Tu Cita
-            </span>
+              Los cupos para esta certificación se están llenando. <span style={{ color: "#4ADE80" }}>No esperes a que se agoten para actuar.</span>
+            </h2>
           </div>
 
-          {/* CTA */}
-          <div className="flex flex-col items-center vsl-fade-6">
-            <button
-              onClick={() => router.push("/step/3")}
-              className="vsl-cta-btn inline-flex items-center justify-center gap-2 rounded-xl font-bold uppercase cursor-pointer whitespace-nowrap"
+          {/* CTA body copy */}
+          <div className="text-center mb-6 md:mb-7 vsl-fade-6">
+            <p
+              className="text-[13px] md:text-[15px] leading-relaxed max-w-[640px] mx-auto"
+              style={{ color: "rgba(255,255,255,0.62)" }}
+            >
+              El siguiente paso es hablar con <strong className="font-semibold text-white/85">Nexy</strong>, nuestro agente de inteligencia artificial, para evaluar si tu perfil califica. Si no califica, te lo decimos directamente. Si califica, accedes al portal exclusivo donde vas a ver todo lo que necesitas para tomar tu decisión.
+            </p>
+          </div>
+
+          {/* CTA buttons */}
+          <div className="flex flex-col items-center gap-3 vsl-fade-6">
+            {/* Botón primario */}
+            <a
+              href={HABLAR_CON_NEXY_HREF}
+              className="vsl-cta-btn inline-flex items-center justify-center gap-2 rounded-xl font-bold uppercase cursor-pointer text-center w-full max-w-[520px]"
               style={{
                 fontSize: "14px",
-                padding: "14px 32px",
-                letterSpacing: "0.08em",
-                color: "#060b18",
-                backgroundColor: "#d4a843",
-                boxShadow: "0 6px 30px rgba(212, 168, 67, 0.4)",
+                padding: "16px 24px",
+                letterSpacing: "0.05em",
+                color: "#0B0D10",
+                backgroundColor: "#4ADE80",
+                boxShadow: "0 6px 30px rgba(74, 222, 128, 0.4)",
                 transition: "all 0.25s ease",
+                lineHeight: "1.2",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = "0 10px 50px rgba(212, 168, 67, 0.6)";
-                e.currentTarget.style.transform = "translateY(-2px) scale(1.02)";
+                e.currentTarget.style.boxShadow = "0 10px 50px rgba(74, 222, 128, 0.6)";
+                e.currentTarget.style.transform = "translateY(-2px) scale(1.01)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "0 6px 30px rgba(212, 168, 67, 0.4)";
+                e.currentTarget.style.boxShadow = "0 6px 30px rgba(74, 222, 128, 0.4)";
                 e.currentTarget.style.transform = "translateY(0) scale(1)";
               }}
             >
-              <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
-              AGENDAR MI LLAMADA
+              HABLAR CON NEXY AHORA — ME LLAMAN EN 5 MINUTOS
+            </a>
+
+            {/* Botón secundario */}
+            <button
+              onClick={() => router.push("/step/3")}
+              className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold cursor-pointer text-center w-full max-w-[520px] transition-all duration-200"
+              style={{
+                fontSize: "13px",
+                padding: "14px 24px",
+                letterSpacing: "0.04em",
+                color: "rgba(255,255,255,0.7)",
+                background: "transparent",
+                border: "1px solid rgba(74, 222, 128, 0.3)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "rgba(74, 222, 128, 0.6)";
+                e.currentTarget.style.color = "#4ADE80";
+                e.currentTarget.style.background = "rgba(74, 222, 128, 0.04)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "rgba(74, 222, 128, 0.3)";
+                e.currentTarget.style.color = "rgba(255,255,255,0.7)";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              AGENDAR MI LLAMADA CON NEXY →
             </button>
 
             <p
-              className="text-[12px] md:text-[13px] mt-2.5"
+              className="text-[12px] md:text-[13px] mt-3 max-w-[560px] text-center leading-relaxed"
               style={{ color: "rgba(255,255,255,0.4)" }}
             >
-              Vamos a evaluar juntos si este negocio encaja con tu situación.
+              Cada día que pasa, más personas se certifican y ocupan posición en un mercado que todavía tiene poca competencia. La ventana no dura para siempre.
             </p>
           </div>
         </div>
@@ -307,7 +301,7 @@ function Step2() {
           <p style={{ color: "rgba(255,255,255,0.2)" }}>
             <strong>IMPORTANTE:</strong> Las ganancias mostradas son aspiracionales. Los resultados varían según capacidad individual, ética laboral, experiencia y otros factores.
           </p>
-          <div className="flex flex-wrap gap-2 pt-0.5" style={{ color: "rgba(212, 168, 67, 0.3)" }}>
+          <div className="flex flex-wrap gap-2 pt-0.5" style={{ color: "rgba(74, 222, 128, 0.3)" }}>
             <a href="#" className="hover:underline">Disclaimer</a>
             <span style={{ color: "rgba(255,255,255,0.08)" }}>|</span>
             <a href="#" className="hover:underline">Privacidad</a>

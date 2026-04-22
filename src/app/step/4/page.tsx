@@ -31,7 +31,7 @@ export default function Step4() {
     <main
       className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-5 py-8 safe-top safe-bottom"
       style={{
-        background: "linear-gradient(160deg, #060b18 0%, #0a1230 40%, #0d1a3a 65%, #060b18 100%)",
+        background: "linear-gradient(160deg, #0B0D10 0%, #12161C 40%, #0d1a3a 65%, #0B0D10 100%)",
       }}
     >
       <div className="w-full max-w-md text-center">
@@ -54,19 +54,31 @@ export default function Step4() {
 
         <h1
           className="text-xl md:text-2xl font-bold text-white mb-3"
-          style={{ fontFamily: "var(--font-inter), sans-serif" }}
+          style={{ fontFamily: "var(--font-inter), sans-serif", lineHeight: "1.2" }}
         >
-          ¡Listo! Tu llamada está confirmada.
+          Tu evaluación con <span style={{ color: "#4ADE80" }}>Nexy</span> está confirmada.
         </h1>
 
         <p
-          className="text-sm mb-8 leading-relaxed"
+          className="text-sm mb-4 leading-relaxed"
           style={{
             fontFamily: "var(--font-inter), sans-serif",
-            color: "rgba(255,255,255,0.5)",
+            color: "rgba(255,255,255,0.7)",
           }}
         >
-          Vas a recibir un mensaje por WhatsApp con los detalles. Prepara tus preguntas — vamos a aprovechar cada minuto. ¡Nos vemos en la llamada!
+          <span className="mr-1">📲</span>Vas a recibir una confirmación por WhatsApp. Asegúrate de atender la llamada en el horario que elegiste.
+        </p>
+
+        <p
+          className="text-[13px] mb-8 leading-relaxed text-left rounded-lg px-4 py-3"
+          style={{
+            fontFamily: "var(--font-inter), sans-serif",
+            color: "rgba(255,255,255,0.75)",
+            background: "rgba(248, 113, 113, 0.06)",
+            border: "1px solid rgba(248, 113, 113, 0.2)",
+          }}
+        >
+          <strong className="font-semibold" style={{ color: "#F87171" }}>Importante:</strong> si no atiendes la llamada, tu lugar se reasigna automáticamente. No hay segundas oportunidades para el mismo horario.
         </p>
 
         {/* Booking details card */}
@@ -84,7 +96,7 @@ export default function Step4() {
                 <span className="text-[13px] font-medium text-right capitalize text-white">
                   {booking.date}
                   <br />
-                  <span style={{ color: "#d4a843" }}>{formatSlotTime(booking.time)}</span>
+                  <span style={{ color: "#4ADE80" }}>{formatSlotTime(booking.time)}</span>
                 </span>
               </div>
               <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />

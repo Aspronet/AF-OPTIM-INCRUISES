@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@asprofunnel/sdk": "file:./sdk",
+    "geist": "^1.7.0",
+    "hls.js": "^1.6.16",
     "libphonenumber-js": "^1.12.41",
     "next": "16.1.6",
     "react": "19.2.3",
