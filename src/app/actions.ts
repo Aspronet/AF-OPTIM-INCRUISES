@@ -1,16 +1,16 @@
 "use server";
 
-import { createAsproFunnel } from "@asprofunnel/sdk";
-import type { TrackStepData } from "@asprofunnel/sdk";
+import { createAsproFunnel } from "@/lib/af-client";
+import type { TrackStepData } from "@/lib/af-client";
 import { promises as dns } from "dns";
 
 const af = createAsproFunnel({
   apiKey: process.env.AF_API_KEY!,
 });
 
-const SUPABASE_URL = "https://pcmuwwfivmstqnoiyqur.supabase.co";
+const SUPABASE_URL = "https://lzqzymvzgxdgrhghepyy.supabase.co";
 const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjbXV3d2Zpdm1zdHFub2l5cXVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NzA1MTMsImV4cCI6MjA4NzA0NjUxM30.MQ3aBluqw3nBz8FcAL9lc564JGsgEkm-E_FGuqfEoZE";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6cXp5bXZ6Z3hkZ3JoZ2hlcHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNDA0NDQsImV4cCI6MjA5MjYxNjQ0NH0.6sF__jhX_Xah3M6Xmd9phdrU5-fXzvJoGrtvGkzcQbM";
 
 // ─── Email Validation ────────────────────────────────────
 
@@ -429,4 +429,115 @@ export async function getAvailableSlots(
     console.error("Get slots error:", e);
     return { ok: false, error: "Failed to get slots" };
   }
+}
+
+// ─── Retell: Start Web Call ──────────────────────────────
+
+export async function startRetellCall(data: {
+  email: string;
+  name?: string;
+  phone?: string;
+  country?: string;
+}): Promise<{ ok: boolean; accessToken?: string; callId?: string; error?: string }> {
+  if (!data.email) return { ok: false, error: "No email" };
+
+  const apiKey = process.env.RETELL_API_KEY;
+  const agentId = process.env.RETELL_AGENT_ID;
+  if (!apiKey || !agentId) {
+    return { ok: false, error: "Retell not configured" };
+  }
+
+  const lead = await lookupLead(data.email);
+
+  try {
+    const res = await fetch("https://api.retellai.com/v2/create-web-call", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        agent_id: agentId,
+        retell_llm_dynamic_variables: {
+          lead_name: (data.name || "").trim().split(/\s+/)[0] || "",
+          lead_email: data.email,
+          lead_phone: data.phone || "",
+          lead_country: data.country || "",
+          campaign_id: process.env.AF_CAMPAIGN_ID || "",
+        },
+        metadata: {
+          lead_id: lead.ok ? lead.leadId : null,
+          lead_email: data.email,
+          source: "funnel_step_2",
+        },
+      }),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      console.error("Retell create-web-call error:", json);
+      return { ok: false, error: json.error || "Failed to start call" };
+    }
+
+    if (lead.ok && lead.leadId && lead.userId && json.call_id) {
+      fetch(`${SUPABASE_URL}/rest/v1/lead_activity`, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          lead_id: lead.leadId,
+          user_id: lead.userId,
+          action: "retell_call_started",
+          metadata: {
+            call_id: json.call_id,
+            agent_id: agentId,
+            channel: "web",
+          },
+        }),
+      }).catch((e) => console.error("Failed to log retell_call_started:", e));
+
+      trackFunnelStep(data.email, "llamada_filtro").catch(() => {});
+    }
+
+    return { ok: true, accessToken: json.access_token, callId: json.call_id };
+  } catch (e) {
+    console.error("startRetellCall error:", e);
+    return { ok: false, error: "Failed to start call" };
+  }
+}
+
+export async function logRetellCallEnded(data: {
+  email: string;
+  callId: string;
+  durationSec: number;
+  outcome?: string;
+}): Promise<{ ok: boolean }> {
+  const lead = await lookupLead(data.email);
+  if (!lead.ok || !lead.leadId || !lead.userId) return { ok: false };
+
+  fetch(`${SUPABASE_URL}/rest/v1/lead_activity`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify({
+      lead_id: lead.leadId,
+      user_id: lead.userId,
+      action: "retell_call_ended",
+      metadata: {
+        call_id: data.callId,
+        duration_sec: data.durationSec,
+        outcome: data.outcome || "completed",
+      },
+    }),
+  }).catch((e) => console.error("Failed to log retell_call_ended:", e));
+
+  return { ok: true };
 }

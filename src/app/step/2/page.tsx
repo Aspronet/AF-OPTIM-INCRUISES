@@ -5,15 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { lookupLead, trackVideoEvent, trackVisitorGeo } from "@/app/actions";
 import VideoPlayer from "@/components/VideoPlayer";
 import type { VideoEventPayload } from "@/components/VideoPlayer";
+import { NexyCallOverlay } from "@/components/NexyCallOverlay";
 
 // ─── CONFIGURATION ──────────────────────────────────────
 // Change these to swap the video for each funnel
 const VIDEO_URL = "https://vz-2228bbe6-62d.b-cdn.net/2f9d378c-0bf6-4c91-9d9e-4bcb3fa53927/playlist.m3u8";
 const VIDEO_POSTER = "";
 const VIDEO_NAME = "VSL Nexfy Certificación"; // name shown in lead_activity metadata
-
-// TODO: replace with WhatsApp link to Nexy agent once available
-const HABLAR_CON_NEXY_HREF = "/step/3?intent=call-now";
 // ────────────────────────────────────────────────────────
 
 export default function Step2Page() {
@@ -28,6 +26,18 @@ function Step2() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [ready, setReady] = useState(false);
+  const [callOpen, setCallOpen] = useState(false);
+  const [leadInfo, setLeadInfo] = useState<{ email: string; name?: string; phone?: string; country?: string }>({ email: "" });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setLeadInfo({
+      email: localStorage.getItem("af_lead_email") || "",
+      name: localStorage.getItem("af_lead_name") || undefined,
+      phone: localStorage.getItem("af_lead_phone") || undefined,
+      country: localStorage.getItem("af_lead_country") || undefined,
+    });
+  }, []);
 
   const handleVideoEvent = useCallback((payload: VideoEventPayload) => {
     const email = localStorage.getItem("af_lead_email") || "";
@@ -223,8 +233,9 @@ function Step2() {
           {/* CTA buttons */}
           <div className="flex flex-col items-center gap-3 vsl-fade-6">
             {/* Botón primario */}
-            <a
-              href={HABLAR_CON_NEXY_HREF}
+            <button
+              onClick={() => setCallOpen(true)}
+              disabled={!leadInfo.email}
               className="vsl-cta-btn inline-flex items-center justify-center gap-2 rounded-xl font-bold uppercase cursor-pointer text-center w-full max-w-[520px]"
               style={{
                 fontSize: "14px",
@@ -235,6 +246,7 @@ function Step2() {
                 boxShadow: "0 6px 30px rgba(74, 222, 128, 0.4)",
                 transition: "all 0.25s ease",
                 lineHeight: "1.2",
+                opacity: leadInfo.email ? 1 : 0.5,
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.boxShadow = "0 10px 50px rgba(74, 222, 128, 0.6)";
@@ -248,8 +260,8 @@ function Step2() {
               <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
-              HABLAR CON NEXY AHORA — ME LLAMAN EN 5 MINUTOS
-            </a>
+              HABLAR CON NEXY AHORA
+            </button>
 
             {/* Botón secundario */}
             <button
@@ -310,6 +322,15 @@ function Step2() {
           </div>
         </div>
       </footer>
+
+      <NexyCallOverlay
+        open={callOpen}
+        onClose={() => setCallOpen(false)}
+        leadEmail={leadInfo.email}
+        leadName={leadInfo.name}
+        leadPhone={leadInfo.phone}
+        leadCountry={leadInfo.country}
+      />
     </main>
   );
 }
