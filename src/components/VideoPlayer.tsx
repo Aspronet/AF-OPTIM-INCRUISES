@@ -29,6 +29,8 @@ type VideoPlayerProps = {
   poster?: string;
   /** Callback fired on every trackable event */
   onVideoEvent?: (payload: VideoEventPayload) => void;
+  /** Periodic watch-time callback in seconds (throttled, for UI gating) */
+  onWatchTime?: (seconds: number) => void;
   /** URL for sendBeacon abandon tracking (POST JSON payload on page leave) */
   abandonBeaconUrl?: string;
   /** Extra data merged into the beacon body */
@@ -55,6 +57,7 @@ export default function VideoPlayer({
   src,
   poster,
   onVideoEvent,
+  onWatchTime,
   abandonBeaconUrl,
   abandonBeaconData,
   milestones = [25, 50, 75, 100],
@@ -66,6 +69,7 @@ export default function VideoPlayer({
   const lastTickRef = useRef(0); // last timestamp for watch-time calc
   const firedMilestonesRef = useRef<Set<number>>(new Set());
   const hasStartedRef = useRef(false);
+  const lastReportRef = useRef(0); // last watch-time report timestamp
 
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -74,6 +78,7 @@ export default function VideoPlayer({
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(autoplay);
   const [showBigPlay, setShowBigPlay] = useState(!autoplay);
+  const [showUnmuteOverlay, setShowUnmuteOverlay] = useState(autoplay);
 
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -238,6 +243,15 @@ export default function VideoPlayer({
       lastTickRef.current = now;
     }
 
+    // periodic watch-time report (throttled to 500ms)
+    if (onWatchTime) {
+      const now = Date.now();
+      if (now - lastReportRef.current > 500) {
+        lastReportRef.current = now;
+        onWatchTime(watchTimeRef.current);
+      }
+    }
+
     // milestone check
     if (v.duration > 0) {
       const pct = (v.currentTime / v.duration) * 100;
@@ -280,6 +294,21 @@ export default function VideoPlayer({
     setMuted(v.muted);
   };
 
+  const handleUnmuteAndRestart = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = false;
+    setMuted(false);
+    try {
+      v.currentTime = 0;
+    } catch {}
+    watchTimeRef.current = 0;
+    firedMilestonesRef.current = new Set();
+    hasStartedRef.current = false;
+    v.play().catch(() => {});
+    setShowUnmuteOverlay(false);
+  };
+
   const changeVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = videoRef.current;
     if (!v) return;
@@ -310,6 +339,7 @@ export default function VideoPlayer({
       onClick={(e) => {
         // only toggle on the video area, not controls
         if ((e.target as HTMLElement).closest(".vp-controls")) return;
+        if (showUnmuteOverlay) return;
         togglePlay();
       }}
     >
@@ -325,6 +355,140 @@ export default function VideoPlayer({
         onEnded={handleEnded}
         onLoadedMetadata={handleLoadedMetadata}
       />
+
+      {/* Unmute + restart overlay (autoplay muted preview) */}
+      {showUnmuteOverlay && (
+        <div
+          className="absolute inset-0 flex items-center justify-center z-30 cursor-pointer group/unmute"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleUnmuteAndRestart();
+          }}
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(11,13,16,0.55) 0%, rgba(11,13,16,0.35) 60%, rgba(11,13,16,0.55) 100%)",
+            backdropFilter: "blur(2px)",
+            WebkitBackdropFilter: "blur(2px)",
+          }}
+        >
+          {/* Outer pulse rings */}
+          <span
+            className="absolute rounded-full pointer-events-none unmute-pulse"
+            style={{
+              width: 180,
+              height: 180,
+              border: "1.5px solid rgba(74, 222, 128, 0.35)",
+            }}
+          />
+          <span
+            className="absolute rounded-full pointer-events-none unmute-pulse-2"
+            style={{
+              width: 180,
+              height: 180,
+              border: "1.5px solid rgba(74, 222, 128, 0.2)",
+            }}
+          />
+
+          <div
+            className="relative flex flex-col items-center justify-center gap-3 rounded-2xl px-7 py-5 md:px-9 md:py-6 transition-transform duration-300 group-hover/unmute:scale-[1.02]"
+            style={{
+              background:
+                "linear-gradient(160deg, rgba(18,24,20,0.92) 0%, rgba(11,13,16,0.94) 100%)",
+              border: "1px solid rgba(74, 222, 128, 0.35)",
+              boxShadow:
+                "0 24px 70px rgba(0,0,0,0.55), 0 0 60px rgba(74, 222, 128, 0.18), 0 0 0 1px rgba(255,255,255,0.04) inset",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+            }}
+          >
+            {/* Top label */}
+            <div className="flex items-center gap-2">
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{
+                  background: "#4ADE80",
+                  boxShadow: "0 0 8px rgba(74, 222, 128, 0.8)",
+                }}
+              />
+              <span
+                className="text-[10px] md:text-[11px] font-semibold uppercase"
+                style={{
+                  letterSpacing: "0.18em",
+                  color: "#4ADE80",
+                }}
+              >
+                Pulsa aquí
+              </span>
+            </div>
+
+            {/* Icon disc */}
+            <div
+              className="unmute-disc relative flex items-center justify-center rounded-full"
+              style={{
+                width: 64,
+                height: 64,
+                background:
+                  "radial-gradient(circle at 30% 30%, rgba(74,222,128,0.18), rgba(74,222,128,0.04) 70%)",
+                border: "1px solid rgba(74, 222, 128, 0.45)",
+                boxShadow:
+                  "0 6px 24px rgba(74, 222, 128, 0.25), 0 0 0 1px rgba(255,255,255,0.05) inset",
+              }}
+            >
+              <svg
+                className="unmute-icon"
+                width="30"
+                height="30"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 10v4a1 1 0 001 1h3l4 4a1 1 0 001.7-.7V5.7A1 1 0 0011 5l-4 4H4a1 1 0 00-1 1z"
+                  fill="#4ADE80"
+                />
+                <path
+                  d="M16 9c1.2 1 2 2 2 3s-.8 2-2 3"
+                  stroke="#4ADE80"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  opacity="0.55"
+                />
+                {/* mute slash */}
+                <line
+                  x1="4"
+                  y1="20"
+                  x2="20"
+                  y2="4"
+                  stroke="#0B0D10"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                />
+                <line
+                  className="unmute-slash"
+                  x1="4"
+                  y1="20"
+                  x2="20"
+                  y2="4"
+                  stroke="#4ADE80"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+
+            {/* Bottom label */}
+            <span
+              className="text-white text-[13px] md:text-[14px] font-medium text-center"
+              style={{
+                letterSpacing: "0.005em",
+                fontFamily: "var(--font-satoshi)",
+              }}
+            >
+              Toca para activar el sonido
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Big play button overlay */}
       {showBigPlay && (
@@ -354,8 +518,8 @@ export default function VideoPlayer({
       <div
         className="vp-controls absolute bottom-0 left-0 right-0 z-20 transition-opacity duration-300"
         style={{
-          opacity: showControls && !showBigPlay ? 1 : 0,
-          pointerEvents: showControls && !showBigPlay ? "auto" : "none",
+          opacity: showControls && !showBigPlay && !showUnmuteOverlay ? 1 : 0,
+          pointerEvents: showControls && !showBigPlay && !showUnmuteOverlay ? "auto" : "none",
           background: "linear-gradient(transparent, rgba(0,0,0,0.85))",
           padding: "32px 12px 10px",
         }}

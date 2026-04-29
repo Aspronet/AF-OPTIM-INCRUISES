@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
-const SENDER_NAME = process.env.BREVO_SENDER_NAME || "AsproFunnel";
-const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "hello@asprofunnel.com";
+const SENDER_NAME = process.env.BREVO_SENDER_NAME || "Nexfy";
+const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "hello@nexfy.io";
 
-const BANNER_URL = "https://pcmuwwfivmstqnoiyqur.supabase.co/storage/v1/object/public/recursos/ChatGPT%20Image%203%20mar%202026,%2002_45_00.png";
+const BANNER_URL = "https://lzqzymvzgxdgrhghepyy.supabase.co/storage/v1/object/public/recursos/mail%20.png";
 
 // ── Google Calendar URL builder ──
 
@@ -39,7 +39,7 @@ function buildGoogleCalendarUrl(opts: {
     action: "TEMPLATE",
     text: opts.title,
     dates: `${start}/${end}`,
-    details: `Llamada de presentaci\u00f3n con ${opts.host} via AsproFunnel`,
+    details: `Llamada de presentaci\u00f3n con ${opts.host} via Nexfy`,
     ctz: opts.timezone || "America/Argentina/Buenos_Aires",
   });
 
@@ -64,21 +64,21 @@ function baseTemplate(opts: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${opts.title}</title>
 </head>
-<body style="margin:0; padding:0; background-color:#F3F0F8; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+<body style="margin:0; padding:0; background-color:#F0FDF4; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
 
-<div style="display:none; max-height:0px; overflow:hidden; font-size:1px; line-height:1px; color:#F3F0F8;">
+<div style="display:none; max-height:0px; overflow:hidden; font-size:1px; line-height:1px; color:#F0FDF4;">
   ${opts.preheader}
 </div>
 
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F3F0F8;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F0FDF4;">
   <tr>
     <td align="center" style="padding:32px 10px;">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#FFFFFF; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(108,43,217,0.08);">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#FFFFFF; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(74,222,128,0.12);">
 
         <!-- Banner -->
         <tr>
           <td style="padding:0; line-height:0;">
-            <img src="${BANNER_URL}" alt="AsproFunnel" width="600" style="display:block; width:100%; max-width:600px; height:auto; border:0;">
+            <img src="${BANNER_URL}" alt="Nexfy" width="600" style="display:block; width:100%; max-width:600px; height:auto; border:0;">
           </td>
         </tr>
 
@@ -87,7 +87,7 @@ function baseTemplate(opts: {
           <td style="padding:0;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td style="height:3px; background:linear-gradient(90deg, #6C2BD9, #8B5CF6, #A78BFA, #8B5CF6, #6C2BD9); font-size:0; line-height:0;">&nbsp;</td>
+                <td style="height:3px; background:linear-gradient(90deg, #16A34A, #4ADE80, #86EFAC, #4ADE80, #16A34A); font-size:0; line-height:0;">&nbsp;</td>
               </tr>
             </table>
           </td>
@@ -116,7 +116,7 @@ function baseTemplate(opts: {
           <td style="padding:0 40px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td style="height:1px; background-color:#EDE9FE; font-size:0; line-height:0;">&nbsp;</td>
+                <td style="height:1px; background-color:#DCFCE7; font-size:0; line-height:0;">&nbsp;</td>
               </tr>
             </table>
           </td>
@@ -134,8 +134,8 @@ function baseTemplate(opts: {
           <td style="padding:12px 40px 6px 40px; text-align:center;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
               <tr>
-                <td style="border-radius:10px; background-color:#6C2BD9; text-align:center;">
-                  <a href="${opts.ctaUrl}" target="_blank" style="display:inline-block; padding:15px 44px; font-size:15px; font-weight:700; color:#FFFFFF; text-decoration:none; letter-spacing:0.3px;">
+                <td style="border-radius:10px; background-color:#4ADE80; text-align:center;">
+                  <a href="${opts.ctaUrl}" target="_blank" style="display:inline-block; padding:15px 44px; font-size:15px; font-weight:700; color:#0B0D10; text-decoration:none; letter-spacing:0.3px;">
                     ${opts.ctaText}
                   </a>
                 </td>
@@ -148,21 +148,21 @@ function baseTemplate(opts: {
         <tr>
           <td style="padding:12px 40px 32px 40px; text-align:center;">
             <p style="margin:0; font-size:13px; color:#9CA3AF; line-height:1.5;">
-              ${opts.secondaryText || '&iquest;Dudas? Respond&eacute; este email o escribinos a <a href="mailto:hello@asprofunnel.com" style="color:#8B5CF6; text-decoration:none; font-weight:600;">hello@asprofunnel.com</a>'}
+              ${opts.secondaryText || '&iquest;Dudas? Respond&eacute; este email o escribinos a <a href="mailto:hello@nexfy.io" style="color:#16A34A; text-decoration:none; font-weight:600;">hello@nexfy.io</a>'}
             </p>
           </td>
         </tr>
 
         <!-- Footer -->
         <tr>
-          <td style="background-color:#F9F7FE; padding:0;">
+          <td style="background-color:#F0FDF4; padding:0;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-              <tr><td style="height:1px; background-color:#EDE9FE; font-size:0; line-height:0;">&nbsp;</td></tr>
+              <tr><td style="height:1px; background-color:#DCFCE7; font-size:0; line-height:0;">&nbsp;</td></tr>
             </table>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td style="padding:28px 40px 12px 40px; text-align:center;">
-                  <img src="https://pcmuwwfivmstqnoiyqur.supabase.co/storage/v1/object/public/recursos/asprofunnel%20banner.png" alt="AsproFunnel" width="140" style="display:inline-block; width:140px; height:auto;">
+                <td style="padding:28px 40px 8px 40px; text-align:center;">
+                  <p style="margin:0; font-size:22px; font-weight:800; letter-spacing:-0.02em; color:#1A1A2E;">Nexfy</p>
                 </td>
               </tr>
               <tr>
@@ -172,23 +172,23 @@ function baseTemplate(opts: {
               </tr>
               <tr>
                 <td style="padding:4px 40px 8px 40px; text-align:center;">
-                  <a href="https://asprofunnel.com" style="color:#8B5CF6; text-decoration:none; font-size:12px; font-weight:600;">asprofunnel.com</a>
+                  <a href="https://nexfy.io" style="color:#16A34A; text-decoration:none; font-size:12px; font-weight:600;">nexfy.io</a>
                 </td>
               </tr>
               <tr>
                 <td style="padding:8px 40px 10px 40px; text-align:center;">
                   <p style="margin:0; font-size:11px; color:#B0A8C0;">
-                    <a href="https://asprofunnel.com/terms" style="color:#9CA3AF; text-decoration:underline;">T&eacute;rminos y Condiciones</a>
+                    <a href="https://nexfy.io/terms" style="color:#9CA3AF; text-decoration:underline;">T&eacute;rminos y Condiciones</a>
                     &nbsp;&nbsp;&middot;&nbsp;&nbsp;
-                    <a href="https://asprofunnel.com/privacy" style="color:#9CA3AF; text-decoration:underline;">Pol&iacute;tica de Privacidad</a>
+                    <a href="https://nexfy.io/privacy" style="color:#9CA3AF; text-decoration:underline;">Pol&iacute;tica de Privacidad</a>
                     &nbsp;&nbsp;&middot;&nbsp;&nbsp;
-                    <a href="mailto:hello@asprofunnel.com" style="color:#9CA3AF; text-decoration:underline;">Contacto</a>
+                    <a href="mailto:hello@nexfy.io" style="color:#9CA3AF; text-decoration:underline;">Contacto</a>
                   </p>
                 </td>
               </tr>
               <tr>
                 <td style="padding:4px 40px 28px 40px; text-align:center;">
-                  <p style="margin:0; font-size:11px; color:#C4B5FD;">&copy; ${new Date().getFullYear()} AsproFunnel &mdash; A product of Nexfy LLC</p>
+                  <p style="margin:0; font-size:11px; color:#86EFAC;">&copy; ${new Date().getFullYear()} Nexfy LLC</p>
                 </td>
               </tr>
             </table>
@@ -211,6 +211,7 @@ function meetingScheduledHtml(opts: {
   dateStr: string;
   timeStr: string;
   gcalUrl: string;
+  portalUrl: string;
 }) {
   return baseTemplate({
     preheader: `Tu reunión con ${opts.coachName} fue agendada para el ${opts.dateStr} a las ${opts.timeStr}.`,
@@ -221,17 +222,17 @@ function meetingScheduledHtml(opts: {
               Hola ${opts.leadName || ""} &#128075;
             </p>
             <p style="margin:14px 0 0 0; font-size:15px; color:#374151; line-height:1.7;">
-              Tu reuni&oacute;n con <strong style="color:#6C2BD9;">${opts.coachName}</strong> fue agendada. Ac&aacute; est&aacute;n los detalles:
+              Tu reuni&oacute;n con <strong style="color:#16A34A;">${opts.coachName}</strong> fue agendada. Ac&aacute; est&aacute;n los detalles:
             </p>
           </td>
         </tr>
 
         <tr>
           <td style="padding:20px 40px 0 40px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F9F7FE; border-radius:12px; border:1px solid #EDE9FE;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F0FDF4; border-radius:12px; border:1px solid #DCFCE7;">
               <tr>
                 <td style="padding:24px;">
-                  <p style="margin:0 0 16px 0; font-size:11px; font-weight:700; color:#6C2BD9; text-transform:uppercase; letter-spacing:1.4px;">Detalles de la reuni&oacute;n</p>
+                  <p style="margin:0 0 16px 0; font-size:11px; font-weight:700; color:#16A34A; text-transform:uppercase; letter-spacing:1.4px;">Detalles de la reuni&oacute;n</p>
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
                       <td style="padding:6px 0; font-size:14px; color:#6B7280; width:100px;">Tipo:</td>
@@ -254,10 +255,53 @@ function meetingScheduledHtml(opts: {
               </tr>
             </table>
           </td>
+        </tr>
+
+        <!-- Add to GCal secondary link -->
+        <tr>
+          <td style="padding:14px 40px 8px 40px; text-align:center;">
+            <a href="${opts.gcalUrl}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; color:#16A34A; text-decoration:none; font-weight:600;">
+              &#128197; Agregar a Google Calendar
+            </a>
+          </td>
+        </tr>
+
+        <!-- 4 pasos del portal -->
+        <tr>
+          <td style="padding:24px 40px 0 40px;">
+            <p style="margin:0 0 14px 0; font-size:14px; color:#374151; line-height:1.6;">
+              <strong style="color:#1A1A2E;">Mientras esper&aacute;s</strong>, conoc&eacute; el portal de la Certificaci&oacute;n. Estos son los 4 pasos que vas a hacer una vez que tu perfil quede aprobado en la llamada con Nexy:
+            </p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F0FDF4; border-radius:12px; border:1px solid #DCFCE7;">
+              <tr>
+                <td style="padding:22px 24px;">
+                  <p style="margin:0 0 14px 0; font-size:11px; font-weight:700; color:#16A34A; text-transform:uppercase; letter-spacing:1.4px;">Tus 4 pasos en el portal</p>
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td valign="top" style="padding:6px 0; font-size:14px; color:#16A34A; font-weight:700; width:32px;">1.</td>
+                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:500; line-height:1.55;">Activ&aacute; tu cuenta y configur&aacute; tu perfil</td>
+                    </tr>
+                    <tr>
+                      <td valign="top" style="padding:6px 0; font-size:14px; color:#16A34A; font-weight:700; width:32px;">2.</td>
+                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:500; line-height:1.55;">Mir&aacute; el m&oacute;dulo de bienvenida (10 min)</td>
+                    </tr>
+                    <tr>
+                      <td valign="top" style="padding:6px 0; font-size:14px; color:#16A34A; font-weight:700; width:32px;">3.</td>
+                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:500; line-height:1.55;">Conect&aacute; tus herramientas de venta</td>
+                    </tr>
+                    <tr>
+                      <td valign="top" style="padding:6px 0; font-size:14px; color:#16A34A; font-weight:700; width:32px;">4.</td>
+                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:500; line-height:1.55;">Lanz&aacute; tu primera campa&ntilde;a guiada</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
         </tr>`,
-    ctaText: "&#128197; Agregar a Google Calendar",
-    ctaUrl: opts.gcalUrl || "https://calendar.google.com",
-    secondaryText: '&iquest;Dudas? Respond&eacute; este email o escribinos a <a href="mailto:hello@asprofunnel.com" style="color:#8B5CF6; text-decoration:none; font-weight:600;">hello@asprofunnel.com</a>',
+    ctaText: "Entrar al portal &rarr;",
+    ctaUrl: opts.portalUrl || "https://portal.nexfy.io",
+    secondaryText: '&iquest;Dudas? Respond&eacute; este email o escribinos a <a href="mailto:hello@nexfy.io" style="color:#16A34A; text-decoration:none; font-weight:600;">hello@nexfy.io</a>',
   });
 }
 
@@ -278,7 +322,7 @@ export async function POST(req: NextRequest) {
     }
 
     const gcalUrl = rawDate ? buildGoogleCalendarUrl({
-      title: `Llamada de Presentación - ${host || "AsproFunnel"}`,
+      title: `Llamada de Presentación - ${host || "Nexfy"}`,
       rawDate,
       time,
       duration: duration || 15,
@@ -286,13 +330,17 @@ export async function POST(req: NextRequest) {
       timezone: timezone || "America/Argentina/Buenos_Aires",
     }) : "";
 
-    const subject = `Reunión confirmada - Llamada de Presentación | AsproFunnel`;
+    const portalBase = process.env.PORTAL_URL || "https://portal.nexfy.io";
+    const portalUrl = `${portalBase}/?ref=${encodeURIComponent(email)}`;
+
+    const subject = `Reunión confirmada - Llamada de Presentación | Nexfy`;
     const htmlContent = meetingScheduledHtml({
       leadName: name || "",
       coachName: host || "Tu asesor",
       dateStr: date,
       timeStr: `${time}${duration ? ` (${duration} min)` : ""}`,
       gcalUrl,
+      portalUrl,
     });
 
     const res = await fetch(BREVO_API_URL, {

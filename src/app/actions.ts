@@ -258,12 +258,20 @@ export async function trackVisitorGeo(data: {
 
 export async function lookupLead(
   email: string
-): Promise<{ ok: boolean; userId?: string; leadId?: string; error?: string }> {
+): Promise<{
+  ok: boolean;
+  userId?: string;
+  leadId?: string;
+  name?: string;
+  phone?: string;
+  country?: string;
+  error?: string;
+}> {
   if (!email) return { ok: false, error: "No email" };
 
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(email)}&campaign_id=eq.${process.env.AF_CAMPAIGN_ID!}&select=id,user_id&order=created_at.desc&limit=1`,
+      `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(email)}&campaign_id=eq.${process.env.AF_CAMPAIGN_ID!}&select=id,user_id,name,phone,country&order=created_at.desc&limit=1`,
       {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -273,7 +281,14 @@ export async function lookupLead(
     );
     const data = await res.json();
     if (data && data.length > 0) {
-      return { ok: true, userId: data[0].user_id, leadId: data[0].id };
+      return {
+        ok: true,
+        userId: data[0].user_id,
+        leadId: data[0].id,
+        name: data[0].name || undefined,
+        phone: data[0].phone || undefined,
+        country: data[0].country || undefined,
+      };
     }
     return { ok: false, error: "Lead not found" };
   } catch (e) {
@@ -449,6 +464,20 @@ export async function startRetellCall(data: {
 
   const lead = await lookupLead(data.email);
 
+  // DB is the source of truth. Fall back to client-supplied values only if BD lookup
+  // didn't return that field (rare, e.g. lead just created and replication lag).
+  const resolvedName = (lead.ok && lead.name) || (data.name && data.name.trim()) || "";
+  const resolvedPhone = (lead.ok && lead.phone) || data.phone || "";
+  const resolvedCountry = (lead.ok && lead.country) || data.country || "";
+  const firstName = resolvedName.trim().split(/\s+/)[0] || "";
+
+  if (!firstName) {
+    console.warn("[startRetellCall] No name resolved for", data.email, {
+      clientSent: !!data.name,
+      dbReturned: lead.ok ? !!lead.name : false,
+    });
+  }
+
   try {
     const res = await fetch("https://api.retellai.com/v2/create-web-call", {
       method: "POST",
@@ -459,10 +488,10 @@ export async function startRetellCall(data: {
       body: JSON.stringify({
         agent_id: agentId,
         retell_llm_dynamic_variables: {
-          lead_name: (data.name || "").trim().split(/\s+/)[0] || "",
+          lead_name: firstName,
           lead_email: data.email,
-          lead_phone: data.phone || "",
-          lead_country: data.country || "",
+          lead_phone: resolvedPhone,
+          lead_country: resolvedCountry,
           campaign_id: process.env.AF_CAMPAIGN_ID || "",
         },
         metadata: {

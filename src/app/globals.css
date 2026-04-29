@@ -564,6 +564,92 @@ input[type="number"] {
   animation: play-pulse 2.5s ease-in-out infinite;
 }
 
+@keyframes unmute-pulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  80% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.unmute-pulse {
+  animation: unmute-pulse 2.4s ease-out infinite;
+}
+
+.unmute-pulse-2 {
+  animation: unmute-pulse 2.4s ease-out 1.2s infinite;
+}
+
+@keyframes unmute-disc-breath {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 6px 24px rgba(74, 222, 128, 0.25), 0 0 0 1px rgba(255,255,255,0.05) inset;
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 8px 32px rgba(74, 222, 128, 0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+  }
+}
+
+.unmute-disc {
+  animation: unmute-disc-breath 1.8s ease-in-out infinite;
+}
+
+@keyframes unmute-icon-shake {
+  0%, 88%, 100% {
+    transform: rotate(0deg);
+  }
+  90% {
+    transform: rotate(-12deg);
+  }
+  92% {
+    transform: rotate(10deg);
+  }
+  94% {
+    transform: rotate(-8deg);
+  }
+  96% {
+    transform: rotate(6deg);
+  }
+  98% {
+    transform: rotate(0deg);
+  }
+}
+
+.unmute-icon {
+  animation: unmute-icon-shake 3.2s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+
+@keyframes unmute-slash-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.unmute-slash {
+  animation: unmute-slash-flash 1.2s ease-in-out infinite;
+}
+
+@keyframes lock-progress-shimmer {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(74, 222, 128, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(74, 222, 128, 0.65);
+  }
+}
+
+.lock-progress-shimmer {
+  animation: lock-progress-shimmer 1.8s ease-in-out infinite;
+}
+
 .btn-shimmer {
   background-size: 200% 100%;
   background-image: linear-gradient(

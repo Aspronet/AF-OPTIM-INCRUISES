@@ -233,7 +233,7 @@ function Step1() {
                   color: "#4ADE80",
                 }}
               >
-                ⚠️ Presentación exclusiva — Cupos de certificación limitados por capacidad operativa
+                CERTIFICACIÓN PROFESIONAL — ACCESO CON REGISTRO
               </span>
             </div>
 
@@ -245,14 +245,14 @@ function Step1() {
                 fontFamily: "var(--font-satoshi)",
               }}
             >
-              Mientras tú miras contenido sobre inteligencia artificial, otros ya están{" "}
+              El mercado hispano necesita profesionales que construyan{" "}
               <span
                 className="relative inline"
                 style={{
                   color: "#4ADE80",
                 }}
               >
-                cobrando miles de dólares
+                sistemas de ventas con IA
                 <span
                   className="absolute -bottom-1 left-0 w-full h-[3px] hidden md:block rounded-full"
                   style={{
@@ -261,15 +261,14 @@ function Step1() {
                   }}
                 />
               </span>{" "}
-              por instalar sistemas de ventas con IA a negocios reales.
+              para negocios reales. Esta certificación te prepara para serlo.
             </h1>
 
             <p
               className="text-[14px] md:text-[1.02rem] leading-relaxed mb-6 md:mb-0"
               style={{ color: "rgba(255,255,255,0.62)" }}
             >
-              Esta es la presentación oficial de la única certificación respaldada por una compañía que construye estos sistemas para sus clientes a{" "}
-              <strong className="font-semibold text-white/85">más de 15.000 dólares por proyecto</strong>. Lo que vas a ver en los próximos minutos no es teoría. Es el sistema funcionando. <em style={{ fontFamily: "var(--font-instrument-serif)", fontStyle: "italic", color: "#4ADE80" }}>Contigo adentro.</em>
+              Respaldada por la compañía que construye e instala estos sistemas para sus propios clientes. Lo que vas a ver no es una promesa — <em style={{ fontFamily: "var(--font-instrument-serif)", fontStyle: "italic", color: "#4ADE80" }}>es el sistema funcionando en tiempo real.</em>
             </p>
           </div>
 

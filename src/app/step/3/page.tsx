@@ -43,6 +43,95 @@ function formatSlotTime(time: string): string {
   return `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
+function formatTimezone(tz?: string): { city: string; iana: string } {
+  if (!tz) return { city: "", iana: "" };
+  const parts = tz.split("/");
+  const last = parts[parts.length - 1] || tz;
+  const city = last.replace(/_/g, " ");
+  return { city, iana: tz.replace(/_/g, " ") };
+}
+
+// ── Booking time helpers ──
+
+function parseBookingTimestamp(rawDate: string, time: string): number {
+  const [y, m, d] = rawDate.split("-").map(Number);
+  const [h, min] = time.split(":").map(Number);
+  return new Date(y, m - 1, d, h, min, 0, 0).getTime();
+}
+
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return "Empieza ahora";
+  const total = Math.floor(ms / 1000);
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (d > 0) return `${d}d ${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  return `${m}m ${s}s`;
+}
+
+function pad2(n: number): string { return n.toString().padStart(2, "0"); }
+
+function buildGcalUrl(rawDate: string, time: string, durationMin: number, host: string, tz: string): string {
+  const [y, m, d] = rawDate.split("-");
+  const [hh, mm] = time.split(":").map(Number);
+  const start = `${y}${m}${d}T${pad2(hh)}${pad2(mm)}00`;
+  const endMins = hh * 60 + mm + durationMin;
+  const endH = Math.floor(endMins / 60) % 24;
+  const endM = endMins % 60;
+  const end = `${y}${m}${d}T${pad2(endH)}${pad2(endM)}00`;
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: "Llamada de evaluación con Nexy — Nexfy",
+    dates: `${start}/${end}`,
+    details: `Evaluación de 15 minutos con ${host} (Nexfy). No es una llamada de ventas — es un filtro real.`,
+    ctz: tz || "America/Argentina/Buenos_Aires",
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function buildIcs(rawDate: string, time: string, durationMin: number, host: string, tz: string): string {
+  const [y, m, d] = rawDate.split("-");
+  const [hh, mm] = time.split(":").map(Number);
+  const start = `${y}${m}${d}T${pad2(hh)}${pad2(mm)}00`;
+  const endMins = hh * 60 + mm + durationMin;
+  const endH = Math.floor(endMins / 60) % 24;
+  const endM = endMins % 60;
+  const end = `${y}${m}${d}T${pad2(endH)}${pad2(endM)}00`;
+  const now = new Date();
+  const dtstamp = `${now.getUTCFullYear()}${pad2(now.getUTCMonth() + 1)}${pad2(now.getUTCDate())}T${pad2(now.getUTCHours())}${pad2(now.getUTCMinutes())}${pad2(now.getUTCSeconds())}Z`;
+  const tzid = tz || "America/Argentina/Buenos_Aires";
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Nexfy//Funnel//ES",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:nexfy-${Date.now()}@nexfy.io`,
+    `DTSTAMP:${dtstamp}`,
+    `DTSTART;TZID=${tzid}:${start}`,
+    `DTEND;TZID=${tzid}:${end}`,
+    "SUMMARY:Llamada de evaluación con Nexy — Nexfy",
+    `DESCRIPTION:Evaluación de 15 minutos con ${host} (Nexfy). No es una llamada de ventas — es un filtro real.`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+}
+
+function downloadIcs(filename: string, content: string) {
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ── Countries with flags ──
 
 const PRIORITY_COUNTRIES = [
@@ -142,6 +231,13 @@ const QUESTIONS: Question[] = [
   { id: 7, text: "Si después de la llamada vemos que este negocio encaja con tu perfil, ¿estás en posición de tomar una decisión e invertir en ti mismo para empezar?", type: "cards", options: ["Sí, estoy listo para empezar si tiene sentido", "Muy probablemente sí, quiero ver los detalles finales", "Depende de la inversión — necesito saber cuánto es", "Solo estoy explorando por ahora"] },
 ];
 
+// Wizard stages — group questions to reduce form fatigue
+const STAGES: { title: string; subtitle: string; indices: number[] }[] = [
+  { title: "Sobre ti", subtitle: "Empezamos con lo básico", indices: [0, 1] },
+  { title: "Tu situación", subtitle: "Para entender tu contexto", indices: [2, 3] },
+  { title: "Tu interés", subtitle: "Última parte antes de agendar", indices: [4, 5, 6] },
+];
+
 // ── Phase type ──
 
 type Phase = "form" | "calendar" | "confirmed";
@@ -153,6 +249,7 @@ export default function Step3() {
   const leadTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
   const [phase, setPhase] = useState<Phase>("form");
+  const [stage, setStage] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
 
   // Country selector
@@ -179,7 +276,15 @@ export default function Step3() {
   const [confirming, setConfirming] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [initialLoading, setInitialLoading] = useState(true);
-  const [confirmedBooking, setConfirmedBooking] = useState<{ date: string; time: string; host: string; duration: number; timezone: string } | null>(null);
+  const [confirmedBooking, setConfirmedBooking] = useState<{ date: string; rawDate: string; time: string; host: string; duration: number; timezone: string } | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Tick every second while on confirmed screen (countdown)
+  useEffect(() => {
+    if (phase !== "confirmed") return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [phase]);
 
   const calendarRef = useRef<HTMLDivElement>(null);
   const calendarDays = useMemo(() => getCalendarDays(viewYear, viewMonth), [viewYear, viewMonth]);
@@ -323,7 +428,7 @@ export default function Step3() {
       }
     } catch (e) { console.error("Booking confirm failed:", e); setBookingError("Error de conexión. Intenta de nuevo."); setConfirming(false); return; }
     if (email) await trackFunnelStep(email, "confirmar_cita");
-    const bookingData = { date: formatDate(selectedDate), time: selectedSlot, host: hostName, duration: durationMin, timezone: leadTimezone };
+    const bookingData = { date: formatDate(selectedDate), rawDate: dateStr, time: selectedSlot, host: hostName, duration: durationMin, timezone: leadTimezone };
     localStorage.setItem("af_booking", JSON.stringify(bookingData));
     localStorage.setItem("af_filter_answers", JSON.stringify(answers));
 
@@ -356,6 +461,9 @@ export default function Step3() {
   const nextMonth = () => { if (!canGoNext) return; if (viewMonth === 11) { setViewYear((y) => y + 1); setViewMonth(0); } else setViewMonth((m) => m + 1); };
 
   const allAnswered = QUESTIONS.every((_, i) => answers[i] && answers[i].trim() !== "");
+  const currentStage = STAGES[stage];
+  const stageAllAnswered = currentStage.indices.every((i) => answers[i] && answers[i].trim() !== "");
+  const isLastStage = stage === STAGES.length - 1;
 
   function handleContinue() {
     if (!allAnswered) return;
@@ -470,34 +578,105 @@ export default function Step3() {
       <div className="absolute inset-0 pointer-events-none opacity-[0.025]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`, backgroundRepeat: "repeat", backgroundSize: "128px 128px" }} />
 
       {/* ── CONFIRMED ── */}
-      {phase === "confirmed" && confirmedBooking && (
-        <div className="relative z-10 flex-1 flex items-center justify-center px-5 py-12">
-          <div className="w-full max-w-md text-center">
-            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full" style={{ background: "rgba(34, 197, 94, 0.1)" }}>
-              <svg className="w-10 h-10" style={{ color: "#22c55e" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-            </div>
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-3" style={{ lineHeight: "1.2", letterSpacing: "-0.015em" }}>Tu evaluación con <span style={{ color: "#4ADE80" }}>Nexy</span> está confirmada.</h2>
-            <p className="text-sm mb-4 leading-relaxed" style={{ color: "rgba(255,255,255,0.7)" }}>
-              <span className="mr-1">📲</span>Vas a recibir una confirmación por WhatsApp. Asegúrate de atender la llamada en el horario que elegiste.
-            </p>
-            <p className="text-[13px] mb-8 leading-relaxed text-left rounded-lg px-4 py-3" style={{ color: "rgba(255,255,255,0.75)", background: "rgba(248, 113, 113, 0.06)", border: "1px solid rgba(248, 113, 113, 0.2)" }}>
-              <strong className="font-semibold" style={{ color: "#F87171" }}>Importante:</strong> si no atiendes la llamada, tu lugar se reasigna automáticamente. No hay segundas oportunidades para el mismo horario.
-            </p>
-            <div className="text-left rounded-xl p-5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <div className="flex flex-col gap-3">
-                <div className="flex justify-between items-start"><span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Fecha y hora</span><span className="text-[13px] font-medium text-right capitalize text-white">{confirmedBooking.date}<br /><span style={{ color: "#4ADE80" }}>{formatSlotTime(confirmedBooking.time)}</span></span></div>
-                <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
-                <div className="flex justify-between"><span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Duración</span><span className="text-[13px] font-medium text-white">{confirmedBooking.duration} min</span></div>
-                <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
-                <div className="flex justify-between"><span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Con</span><span className="text-[13px] font-medium text-white">{confirmedBooking.host}</span></div>
-                <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
-                <div className="flex justify-between"><span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Zona horaria</span><span className="text-[13px] font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>{confirmedBooking.timezone?.replace(/_/g, " ")}</span></div>
+      {phase === "confirmed" && confirmedBooking && (() => {
+        const bookingMs = parseBookingTimestamp(confirmedBooking.rawDate, confirmedBooking.time);
+        const msUntil = bookingMs - now;
+        const countdownLabel = formatCountdown(msUntil);
+        const isImminent = msUntil > 0 && msUntil < 60 * 60 * 1000; // < 1h
+        const gcalUrl = buildGcalUrl(confirmedBooking.rawDate, confirmedBooking.time, confirmedBooking.duration, confirmedBooking.host, confirmedBooking.timezone);
+        const handleIcsDownload = () => {
+          const ics = buildIcs(confirmedBooking.rawDate, confirmedBooking.time, confirmedBooking.duration, confirmedBooking.host, confirmedBooking.timezone);
+          downloadIcs(`nexfy-${confirmedBooking.rawDate}.ics`, ics);
+        };
+        return (
+          <div className="relative z-10 flex-1 flex items-start justify-center px-5 py-12">
+            <div className="w-full max-w-md text-center">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full" style={{ background: "rgba(34, 197, 94, 0.1)" }}>
+                <svg className="w-10 h-10" style={{ color: "#22c55e" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </div>
+              <h2 className="text-xl md:text-2xl font-bold text-white mb-3" style={{ lineHeight: "1.2", letterSpacing: "-0.015em" }}>Tu evaluación con <span style={{ color: "#4ADE80" }}>Nexy</span> está confirmada.</h2>
+
+              {/* Live countdown */}
+              <div className="mb-5 rounded-xl px-4 py-4" style={{ background: isImminent ? "rgba(248, 113, 113, 0.08)" : "rgba(74, 222, 128, 0.06)", border: `1px solid ${isImminent ? "rgba(248, 113, 113, 0.25)" : "rgba(74, 222, 128, 0.22)"}` }}>
+                <p className="text-[10px] uppercase font-bold tracking-widest mb-1.5" style={{ color: isImminent ? "#F87171" : "rgba(74, 222, 128, 0.85)", letterSpacing: "0.18em" }}>
+                  {msUntil <= 0 ? "Tu llamada está empezando" : "Tu llamada empieza en"}
+                </p>
+                <p className="font-mono font-bold tabular-nums" style={{ fontSize: msUntil <= 0 ? "20px" : "26px", color: isImminent ? "#F87171" : "#4ADE80", letterSpacing: "0.02em" }}>
+                  {countdownLabel}
+                </p>
+              </div>
+
+              <p className="text-sm mb-4 leading-relaxed" style={{ color: "rgba(255,255,255,0.7)" }}>
+                <span className="mr-1">📲</span>Vas a recibir una confirmación por WhatsApp. Asegúrate de atender la llamada en el horario que elegiste.
+              </p>
+              <p className="text-[13px] mb-6 leading-relaxed text-left rounded-lg px-4 py-3" style={{ color: "rgba(255,255,255,0.75)", background: "rgba(248, 113, 113, 0.06)", border: "1px solid rgba(248, 113, 113, 0.2)" }}>
+                <strong className="font-semibold" style={{ color: "#F87171" }}>Importante:</strong> si no atiendes la llamada, tu lugar se reasigna automáticamente. No hay segundas oportunidades para el mismo horario.
+              </p>
+
+              <div className="text-left rounded-xl p-5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between items-start"><span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Fecha y hora</span><span className="text-[13px] font-medium text-right capitalize text-white">{confirmedBooking.date}<br /><span style={{ color: "#4ADE80" }}>{formatSlotTime(confirmedBooking.time)}</span></span></div>
+                  <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+                  <div className="flex justify-between"><span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Duración</span><span className="text-[13px] font-medium text-white">{confirmedBooking.duration} min</span></div>
+                  <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+                  <div className="flex justify-between"><span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Con</span><span className="text-[13px] font-medium text-white">{confirmedBooking.host}</span></div>
+                  <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+                  <div className="flex justify-between items-start">
+                    <span className="text-[12px]" style={{ color: "rgba(255,255,255,0.3)" }}>Zona horaria</span>
+                    <span className="text-right">
+                      <span className="block text-[13px] font-medium text-white">{formatTimezone(confirmedBooking.timezone).city}</span>
+                      <span className="block text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{formatTimezone(confirmedBooking.timezone).iana}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Add to calendar */}
+              <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                <a
+                  href={gcalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg py-3 text-[12px] font-semibold transition-all cursor-pointer"
+                  style={{ background: "rgba(74, 222, 128, 0.1)", border: "1px solid rgba(74, 222, 128, 0.35)", color: "#4ADE80" }}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  Agregar a Google Calendar
+                </a>
+                <button
+                  type="button"
+                  onClick={handleIcsDownload}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg py-3 text-[12px] font-semibold transition-all cursor-pointer"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.75)" }}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
+                  Descargar .ics (Apple/Outlook)
+                </button>
+              </div>
+
+              {/* Portal teaser */}
+              <div className="mt-8 rounded-xl p-5 text-left" style={{ background: "linear-gradient(135deg, rgba(74,222,128,0.04) 0%, rgba(74,222,128,0.02) 100%)", border: "1px solid rgba(74,222,128,0.18)" }}>
+                <p className="text-[10px] font-bold uppercase mb-2" style={{ letterSpacing: "0.18em", color: "rgba(74,222,128,0.85)" }}>Mientras esperás</p>
+                <h3 className="text-[15px] font-bold text-white mb-1.5" style={{ lineHeight: "1.3" }}>Conocé el portal de la Certificación</h3>
+                <p className="text-[12px] mb-3 leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+                  Si tu perfil encaja en la llamada, vas a entrar acá. Mirá los 4 pasos que te esperan y empezá a familiarizarte.
+                </p>
+                <a
+                  href="https://portal.nexfy.io"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-[12px] font-semibold"
+                  style={{ color: "#4ADE80" }}
+                >
+                  Ver portal →
+                </a>
+              </div>
+
+              <p className="text-[11px] mt-6" style={{ color: "rgba(255,255,255,0.2)" }}>Puedes cerrar esta página. Te contactaremos por WhatsApp o email.</p>
             </div>
-            <p className="text-[11px] mt-6" style={{ color: "rgba(255,255,255,0.2)" }}>Puedes cerrar esta página. Te contactaremos por WhatsApp o email.</p>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── FORM + CALENDAR ── */}
       {phase !== "confirmed" && (
@@ -523,6 +702,28 @@ export default function Step3() {
               </p>
             </div>
 
+            {/* Video Nexy */}
+            <div className="vsl-fade-2 mb-8 md:mb-10">
+              <div
+                className="relative w-full aspect-video rounded-2xl overflow-hidden"
+                style={{
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  boxShadow:
+                    "0 20px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.05) inset, 0 0 60px rgba(74, 222, 128, 0.03)",
+                  background: "#000",
+                }}
+              >
+                <iframe
+                  src="https://iframe.mediadelivery.net/embed/642321/dc211a3d-75a9-4c39-a597-8dc0c7f5cc09?autoplay=false&preload=true&responsive=true"
+                  loading="lazy"
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                  style={{ border: "none" }}
+                />
+              </div>
+            </div>
+
             {/* Bloque de urgencia */}
             <div
               className="vsl-fade-2 mb-8 md:mb-10 text-left rounded-xl px-5 py-4"
@@ -538,72 +739,120 @@ export default function Step3() {
               </p>
             </div>
 
-            {/* ── 7 Questions ── */}
-            {(phase === "form" || phase === "calendar") && (
-              <div className="space-y-0">
-                {QUESTIONS.map((q, idx) => (
-                  <div key={q.id} className={`py-5 sm:py-7 md:py-8 ${idx < QUESTIONS.length - 1 ? "border-b" : ""}`} style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                    {/* Separator before Q7 */}
-                    {idx === 6 && (
-                      <div className="flex items-center gap-4 mb-5 -mt-2">
-                        <div className="flex-1 h-px" style={{ background: "rgba(74, 222, 128, 0.2)" }} />
-                        <span className="text-[10px] tracking-widest uppercase font-semibold" style={{ color: "rgba(74, 222, 128, 0.6)" }}>Última Pregunta</span>
-                        <div className="flex-1 h-px" style={{ background: "rgba(74, 222, 128, 0.2)" }} />
-                      </div>
-                    )}
-
-                    <h3 className="text-[16px] md:text-[19px] font-bold text-white mb-4" style={{ lineHeight: "1.35" }}>{q.text}</h3>
-
-                    {/* Text input */}
-                    {q.type === "text" && (
-                      <input type="text" value={answers[idx] || ""} onChange={(e) => setAnswers((prev) => ({ ...prev, [idx]: e.target.value }))} placeholder={q.placeholder}
-                        className="w-full px-5 py-4 rounded-lg text-white placeholder-white/25 outline-none text-sm transition-all duration-200"
-                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(74, 222, 128, 0.5)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(74, 222, 128, 0.08)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.boxShadow = "none"; }}
-                      />
-                    )}
-
-                    {/* Country selector */}
-                    {q.type === "country" && renderCountrySelector(idx)}
-
-                    {/* Cards */}
-                    {q.type === "cards" && q.options && (
-                      <div className="space-y-2.5">
-                        {q.options.map((opt) => {
-                          const isSelected = answers[idx] === opt;
-                          return (
-                            <button key={opt} onClick={() => setAnswers((prev) => ({ ...prev, [idx]: opt }))}
-                              className="w-full text-left px-5 py-4 rounded-xl text-sm transition-all duration-200 cursor-pointer flex items-center gap-3"
-                              style={{
-                                background: isSelected ? "rgba(74, 222, 128, 0.1)" : "rgba(255,255,255,0.03)",
-                                border: `1px solid ${isSelected ? "rgba(74, 222, 128, 0.45)" : "rgba(255,255,255,0.08)"}`,
-                                color: isSelected ? "#4ADE80" : "rgba(255,255,255,0.7)",
-                              }}>
-                              <div className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all" style={{ borderColor: isSelected ? "#4ADE80" : "rgba(255,255,255,0.15)", background: isSelected ? "#4ADE80" : "transparent" }}>
-                                {isSelected && <svg className="w-3 h-3 text-[#0B0D10]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                              </div>
-                              <span>{opt}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+            {/* ── Wizard form (phase: form) ── */}
+            {phase === "form" && (
+              <div>
+                {/* Stage progress indicator */}
+                <div className="mb-6 md:mb-7">
+                  <div className="flex items-center justify-between mb-3 gap-3">
+                    <span className="text-[10px] md:text-[11px] font-bold uppercase tracking-widest" style={{ color: "rgba(74,222,128,0.85)" }}>
+                      Paso {stage + 1} de {STAGES.length} · {currentStage.title}
+                    </span>
+                    <span className="text-[10px] md:text-[11px] text-right truncate" style={{ color: "rgba(255,255,255,0.35)" }}>
+                      {currentStage.subtitle}
+                    </span>
                   </div>
-                ))}
+                  <div className="flex items-center gap-1.5">
+                    {STAGES.map((_, i) => (
+                      <div key={i} className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                        <div
+                          className="h-full rounded-full transition-all duration-500 ease-out"
+                          style={{
+                            width: i <= stage ? "100%" : "0%",
+                            background: i < stage
+                              ? "linear-gradient(90deg, rgba(74,222,128,0.5), rgba(74,222,128,0.7))"
+                              : i === stage
+                                ? "linear-gradient(90deg, #4ADE80, #86EFAC)"
+                                : "transparent",
+                            boxShadow: i === stage ? "0 0 12px rgba(74,222,128,0.4)" : "none",
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-                {/* Continue button */}
-                {phase === "form" && (
-                  <div className="pt-6 pb-2">
-                    <button onClick={handleContinue} disabled={!allAnswered}
-                      className="w-full py-4 rounded-xl text-sm font-bold uppercase cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                      style={{ letterSpacing: "0.08em", color: "#0B0D10", backgroundColor: "#4ADE80", boxShadow: allAnswered ? "0 6px 30px rgba(74, 222, 128, 0.4)" : "none", transition: "all 0.25s ease" }}
-                      onMouseEnter={(e) => { if (allAnswered) { e.currentTarget.style.boxShadow = "0 10px 50px rgba(74, 222, 128, 0.6)"; e.currentTarget.style.transform = "translateY(-2px) scale(1.02)"; } }}
-                      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = allAnswered ? "0 6px 30px rgba(74, 222, 128, 0.4)" : "none"; e.currentTarget.style.transform = "translateY(0) scale(1)"; }}>
-                      CONTINUAR
+                {/* Stage questions */}
+                <div className="space-y-0">
+                  {currentStage.indices.map((idx, posInStage) => {
+                    const q = QUESTIONS[idx];
+                    const isLastInStage = posInStage === currentStage.indices.length - 1;
+                    return (
+                      <div key={q.id} className={`py-5 sm:py-7 md:py-8 ${!isLastInStage ? "border-b" : ""}`} style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                        <h3 className="text-[16px] md:text-[19px] font-bold text-white mb-4" style={{ lineHeight: "1.35" }}>{q.text}</h3>
+
+                        {/* Text input */}
+                        {q.type === "text" && (
+                          <input type="text" value={answers[idx] || ""} onChange={(e) => setAnswers((prev) => ({ ...prev, [idx]: e.target.value }))} placeholder={q.placeholder}
+                            className="w-full px-5 py-4 rounded-lg text-white placeholder-white/25 outline-none text-sm transition-all duration-200"
+                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(74, 222, 128, 0.5)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(74, 222, 128, 0.08)"; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.boxShadow = "none"; }}
+                          />
+                        )}
+
+                        {/* Country selector */}
+                        {q.type === "country" && renderCountrySelector(idx)}
+
+                        {/* Cards */}
+                        {q.type === "cards" && q.options && (
+                          <div className="space-y-2.5">
+                            {q.options.map((opt) => {
+                              const isSelected = answers[idx] === opt;
+                              return (
+                                <button key={opt} onClick={() => setAnswers((prev) => ({ ...prev, [idx]: opt }))}
+                                  className="w-full text-left px-5 py-4 rounded-xl text-sm transition-all duration-200 cursor-pointer flex items-center gap-3"
+                                  style={{
+                                    background: isSelected ? "rgba(74, 222, 128, 0.1)" : "rgba(255,255,255,0.03)",
+                                    border: `1px solid ${isSelected ? "rgba(74, 222, 128, 0.45)" : "rgba(255,255,255,0.08)"}`,
+                                    color: isSelected ? "#4ADE80" : "rgba(255,255,255,0.7)",
+                                  }}>
+                                  <div className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all" style={{ borderColor: isSelected ? "#4ADE80" : "rgba(255,255,255,0.15)", background: isSelected ? "#4ADE80" : "transparent" }}>
+                                    {isSelected && <svg className="w-3 h-3 text-[#0B0D10]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                  </div>
+                                  <span>{opt}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Stage navigation */}
+                <div className="pt-6 pb-2 flex flex-col-reverse sm:flex-row items-stretch gap-3">
+                  {stage > 0 && (
+                    <button
+                      onClick={() => { setStage(stage - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                      className="px-5 py-4 rounded-xl text-sm font-semibold cursor-pointer transition-all sm:w-auto"
+                      style={{ color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "rgba(255,255,255,0.9)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}
+                    >
+                      ← Atrás
                     </button>
-                  </div>
-                )}
+                  )}
+                  <button
+                    onClick={() => {
+                      if (!stageAllAnswered) return;
+                      if (isLastStage) {
+                        handleContinue();
+                      } else {
+                        setStage(stage + 1);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
+                    disabled={!stageAllAnswered}
+                    className="flex-1 py-4 rounded-xl text-sm font-bold uppercase cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{ letterSpacing: "0.08em", color: "#0B0D10", backgroundColor: "#4ADE80", boxShadow: stageAllAnswered ? "0 6px 30px rgba(74, 222, 128, 0.4)" : "none", transition: "all 0.25s ease" }}
+                    onMouseEnter={(e) => { if (stageAllAnswered) { e.currentTarget.style.boxShadow = "0 10px 50px rgba(74, 222, 128, 0.6)"; e.currentTarget.style.transform = "translateY(-2px) scale(1.01)"; } }}
+                    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = stageAllAnswered ? "0 6px 30px rgba(74, 222, 128, 0.4)" : "none"; e.currentTarget.style.transform = "translateY(0) scale(1)"; }}
+                  >
+                    {isLastStage ? "VER HORARIOS DISPONIBLES" : "CONTINUAR"}
+                  </button>
+                </div>
               </div>
             )}
 
