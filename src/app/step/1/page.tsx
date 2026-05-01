@@ -155,6 +155,24 @@ function Step1() {
     }
   }, [assignSlug]);
 
+  // Track WhatsApp lead click (Nexy → optim) — fires once per landing visit
+  useEffect(() => {
+    const phoneParam = searchParams.get("phone");
+    const clidParam = searchParams.get("clid");
+    const utmSource = searchParams.get("utm_source");
+    if (!phoneParam) return;
+    fetch("https://n8n.srv1267733.hstgr.cloud/webhook/optim-click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: phoneParam,
+        clid: clidParam,
+        utm_source: utmSource,
+        ts: Date.now(),
+      }),
+    }).catch(() => {});
+  }, [searchParams]);
+
   useEffect(() => {
     fetch("https://ipapi.co/json/")
       .then((r) => r.json())

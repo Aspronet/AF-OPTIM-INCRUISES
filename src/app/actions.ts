@@ -174,6 +174,22 @@ export async function submitLead(
       ).catch((e) => console.error("Failed to save timezone:", e));
     }
 
+    // Notify n8n if this lead came from WhatsApp/Nexy (utm_source=whatsapp)
+    if (utms?.utm_source === "whatsapp" && fullPhone) {
+      fetch("https://n8n.srv1267733.hstgr.cloud/webhook/optim-optin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: fullPhone,
+          email,
+          name,
+          country: countryIso,
+          clid: utms?.clid || null,
+          utm_source: "whatsapp",
+        }),
+      }).catch((e) => console.error("Failed to notify n8n optim-optin:", e));
+    }
+
     return { ok: true, error: "", email, name, phone: fullPhone, assignedTo: resolvedUserId || res.assignedTo, campaignId: process.env.AF_CAMPAIGN_ID };
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : String(e);

@@ -71,6 +71,22 @@ function Step2() {
     });
   }, []);
 
+  // Notify n8n when WhatsApp lead reaches the video page
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const phone = localStorage.getItem("af_lead_phone");
+    if (!phone) return;
+    fetch("https://n8n.srv1267733.hstgr.cloud/webhook/optim-video-start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone,
+        email: localStorage.getItem("af_lead_email") || "",
+        ts: Date.now(),
+      }),
+    }).catch(() => {});
+  }, []);
+
   const handleVideoEvent = useCallback((payload: VideoEventPayload) => {
     const email = localStorage.getItem("af_lead_email") || "";
     const userId = localStorage.getItem("af_owner_id") || "";
@@ -86,6 +102,22 @@ function Step2() {
       videoName: VIDEO_NAME,
       step: 2,
     });
+    // Notify n8n when WhatsApp lead completes the video
+    if (payload.event === "completed") {
+      const phone = localStorage.getItem("af_lead_phone");
+      if (phone) {
+        fetch("https://n8n.srv1267733.hstgr.cloud/webhook/optim-video-complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone,
+            email,
+            video_progress: 100,
+            ts: Date.now(),
+          }),
+        }).catch(() => {});
+      }
+    }
   }, []);
 
   // Beacon data for abandon tracking (read once, stays stable)
