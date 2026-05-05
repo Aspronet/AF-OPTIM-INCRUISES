@@ -211,7 +211,6 @@ function meetingScheduledHtml(opts: {
   dateStr: string;
   timeStr: string;
   gcalUrl: string;
-  portalUrl: string;
 }) {
   return baseTemplate({
     preheader: `Nexy te va a llamar el ${opts.dateStr} a las ${opts.timeStr} para tu evaluación de perfil.`,
@@ -270,50 +269,22 @@ function meetingScheduledHtml(opts: {
           </td>
         </tr>
 
-        <!-- Add to GCal secondary link -->
+        <!-- Recordatorio importante -->
         <tr>
-          <td style="padding:14px 40px 8px 40px; text-align:center;">
-            <a href="${opts.gcalUrl}" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; color:#16A34A; text-decoration:none; font-weight:600;">
-              &#128197; Agregar a Google Calendar
-            </a>
-          </td>
-        </tr>
-
-        <!-- 4 pasos del portal -->
-        <tr>
-          <td style="padding:24px 40px 0 40px;">
-            <p style="margin:0 0 14px 0; font-size:14px; color:#374151; line-height:1.6;">
-              <strong style="color:#1A1A2E;">Mientras esper&aacute;s</strong>, conoc&eacute; el portal de la Certificaci&oacute;n. Estos son los 4 pasos que vas a hacer una vez que tu perfil quede aprobado en la llamada con ${opts.coachName}:
-            </p>
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F0FDF4; border-radius:12px; border:1px solid #DCFCE7;">
+          <td style="padding:18px 40px 0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FEF2F2; border-radius:10px; border:1px solid #FECACA;">
               <tr>
-                <td style="padding:22px 24px;">
-                  <p style="margin:0 0 14px 0; font-size:11px; font-weight:700; color:#16A34A; text-transform:uppercase; letter-spacing:1.4px;">Tus 4 pasos en el portal</p>
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                      <td valign="top" style="padding:6px 0; font-size:14px; color:#16A34A; font-weight:700; width:32px;">1.</td>
-                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:500; line-height:1.55;">Activ&aacute; tu cuenta y configur&aacute; tu perfil</td>
-                    </tr>
-                    <tr>
-                      <td valign="top" style="padding:6px 0; font-size:14px; color:#16A34A; font-weight:700; width:32px;">2.</td>
-                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:500; line-height:1.55;">Mir&aacute; el m&oacute;dulo de bienvenida (10 min)</td>
-                    </tr>
-                    <tr>
-                      <td valign="top" style="padding:6px 0; font-size:14px; color:#16A34A; font-weight:700; width:32px;">3.</td>
-                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:500; line-height:1.55;">Conect&aacute; tus herramientas de venta</td>
-                    </tr>
-                    <tr>
-                      <td valign="top" style="padding:6px 0; font-size:14px; color:#16A34A; font-weight:700; width:32px;">4.</td>
-                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:500; line-height:1.55;">Lanz&aacute; tu primera campa&ntilde;a guiada</td>
-                    </tr>
-                  </table>
+                <td style="padding:14px 18px;">
+                  <p style="margin:0; font-size:13px; color:#991B1B; line-height:1.55;">
+                    <strong>Importante:</strong> si no atend&eacute;s la llamada, tu lugar se reasigna autom&aacute;ticamente. No hay segundas oportunidades para el mismo horario.
+                  </p>
                 </td>
               </tr>
             </table>
           </td>
         </tr>`,
-    ctaText: "Entrar al portal &rarr;",
-    ctaUrl: opts.portalUrl || "https://portal.nexfy.io",
+    ctaText: "&#128197; Agregar a Google Calendar",
+    ctaUrl: opts.gcalUrl || "https://nexfy.io",
     secondaryText: '&iquest;Dudas? Respond&eacute; este email o escribinos a <a href="mailto:hello@nexfy.io" style="color:#16A34A; text-decoration:none; font-weight:600;">hello@nexfy.io</a>',
   });
 }
@@ -344,9 +315,6 @@ export async function POST(req: NextRequest) {
       timezone: timezone || "America/Argentina/Buenos_Aires",
     }) : "";
 
-    const portalBase = process.env.PORTAL_URL || "https://portal.nexfy.io";
-    const portalUrl = `${portalBase}/?ref=${encodeURIComponent(email)}`;
-
     const subject = `🎙️ Tu evaluación con ${coachName} está agendada · Nexfy`;
     const htmlContent = meetingScheduledHtml({
       leadName: name || "",
@@ -354,7 +322,6 @@ export async function POST(req: NextRequest) {
       dateStr: date,
       timeStr: `${time}${duration ? ` (${duration} min)` : ""}`,
       gcalUrl,
-      portalUrl,
     });
 
     const res = await fetch(BREVO_API_URL, {

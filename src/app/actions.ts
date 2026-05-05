@@ -478,7 +478,7 @@ interface RequestCallLinkInput {
 
 export async function requestCallLink(
   data: RequestCallLinkInput
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; callUrl?: string; error?: string }> {
   const email = data.email.trim().toLowerCase();
   const phone = data.phone.trim();
   const name = data.name.trim();
@@ -606,7 +606,7 @@ export async function requestCallLink(
     }).catch(() => {});
   }
 
-  return { ok: true };
+  return { ok: true, callUrl };
 }
 
 // ─── Nexy Booking (Step 3 → nexy_bookings) ──────────────

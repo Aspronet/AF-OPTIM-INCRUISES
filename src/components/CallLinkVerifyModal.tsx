@@ -12,7 +12,9 @@ interface Props {
   initialCountry?: string;
 }
 
-type Phase = "form" | "submitting" | "sent" | "error";
+type Phase = "form" | "submitting" | "redirecting" | "error";
+
+const REDIRECT_DELAY_MS = 600; // brief visual confirmation before navigating away
 
 export function CallLinkVerifyModal({
   open,
@@ -39,11 +41,11 @@ export function CallLinkVerifyModal({
     setName(initialName);
   }, [open, initialEmail, initialPhone, initialName]);
 
-  // Esc to close (only in form/sent phases)
+  // Esc to close (only when not actively submitting/redirecting)
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && phase !== "submitting") onClose();
+      if (e.key === "Escape" && phase !== "submitting" && phase !== "redirecting") onClose();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -80,7 +82,7 @@ export function CallLinkVerifyModal({
         name: trimName,
         country: initialCountry,
       });
-      if (!res.ok) {
+      if (!res.ok || !res.callUrl) {
         setError(res.error || "Algo salió mal. Probá de nuevo.");
         setPhase("error");
         return;
@@ -91,7 +93,13 @@ export function CallLinkVerifyModal({
         localStorage.setItem("af_lead_name", trimName);
         localStorage.setItem("af_lead_phone", trimPhone);
       } catch {}
-      setPhase("sent");
+      // Brief confirmation, then go straight to call.nexfy.io.
+      // The email is fire-and-forget (backup if user comes back later).
+      setPhase("redirecting");
+      const target = res.callUrl;
+      setTimeout(() => {
+        window.location.href = target;
+      }, REDIRECT_DELAY_MS);
     } catch (err) {
       console.error("requestCallLink error:", err);
       setError("Error de red. Reintentá en un momento.");
@@ -108,7 +116,7 @@ export function CallLinkVerifyModal({
         WebkitBackdropFilter: "blur(20px)",
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget && phase !== "submitting") onClose();
+        if (e.target === e.currentTarget && phase !== "submitting" && phase !== "redirecting") onClose();
       }}
     >
       <div
@@ -132,7 +140,7 @@ export function CallLinkVerifyModal({
         />
 
         {/* Close button */}
-        {phase !== "submitting" && (
+        {phase !== "submitting" && phase !== "redirecting" && (
           <button
             onClick={onClose}
             aria-label="Cerrar"
@@ -312,8 +320,8 @@ export function CallLinkVerifyModal({
             </form>
           )}
 
-          {/* ─── Sent ─── */}
-          {phase === "sent" && (
+          {/* ─── Redirecting to call.nexfy.io ─── */}
+          {phase === "redirecting" && (
             <div className="text-center">
               <div className="flex justify-center mb-5">
                 <div
@@ -325,19 +333,14 @@ export function CallLinkVerifyModal({
                     boxShadow: "0 0 30px rgba(74,222,128,0.3)",
                   }}
                 >
-                  <svg
-                    className="w-7 h-7"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="#4ADE80"
-                    strokeWidth={2.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+                  <span
+                    className="inline-block w-7 h-7 border-[3px] rounded-full"
+                    style={{
+                      borderColor: "rgba(74,222,128,0.18)",
+                      borderTopColor: "#4ADE80",
+                      animation: "nexy-spin 0.85s linear infinite",
+                    }}
+                  />
                 </div>
               </div>
 
@@ -345,62 +348,33 @@ export function CallLinkVerifyModal({
                 style={{
                   fontFamily: "var(--font-satoshi)",
                   fontWeight: 700,
-                  fontSize: "24px",
+                  fontSize: "22px",
                   letterSpacing: "-0.02em",
                   lineHeight: 1.2,
                   color: "var(--nexfy-text)",
                 }}
                 className="mb-2"
               >
-                Listo. Te mandamos el link.
+                Conectándote con Nexy…
               </h2>
               <p
-                className="mb-6"
+                className="mb-5"
                 style={{
                   color: "var(--nexfy-text-tertiary)",
                   fontSize: "14px",
                   lineHeight: 1.6,
                 }}
               >
-                Revisá tu casilla en{" "}
-                <strong style={{ color: "var(--nexfy-text)" }}>{email}</strong>.
-                <br />
-                Suele llegar en menos de 1 minuto.
+                Te llevamos a tu sala privada. Si no se abre sola en 2 segundos, tocá el botón.
               </p>
 
-              <div
-                className="rounded-2xl p-4 mb-6 text-left"
-                style={{
-                  background: "rgba(74,222,128,0.04)",
-                  border: "1px solid rgba(74,222,128,0.18)",
-                }}
+              <p
+                className="text-[11px] mb-4"
+                style={{ color: "var(--nexfy-text-muted)" }}
               >
-                <p
-                  className="text-[11px] font-bold uppercase mb-2"
-                  style={{ color: "#4ADE80", letterSpacing: "0.14em" }}
-                >
-                  Si no lo ves
-                </p>
-                <p
-                  className="text-[13px] leading-relaxed"
-                  style={{ color: "var(--nexfy-text-secondary)" }}
-                >
-                  Revisá la carpeta <strong style={{ color: "var(--nexfy-text)" }}>Spam</strong> o <strong style={{ color: "var(--nexfy-text)" }}>Promociones</strong>. El link es válido por 14 días.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full rounded-xl py-3 font-semibold text-[13px] transition-all cursor-pointer"
-                style={{
-                  background: "rgba(255,255,255,0.05)",
-                  color: "rgba(255,255,255,0.8)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                }}
-              >
-                Cerrar
-              </button>
+                También te mandamos el link por email a{" "}
+                <strong style={{ color: "var(--nexfy-text-secondary)" }}>{email}</strong> por si necesitás volver más tarde.
+              </p>
             </div>
           )}
         </div>
