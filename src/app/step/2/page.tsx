@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { lookupLead, trackVideoEvent, trackVisitorGeo } from "@/app/actions";
 import VideoPlayer from "@/components/VideoPlayer";
 import type { VideoEventPayload } from "@/components/VideoPlayer";
-import { NexyCallOverlay } from "@/components/NexyCallOverlay";
+import { CallLinkVerifyModal } from "@/components/CallLinkVerifyModal";
 
 // ─── CONFIGURATION ──────────────────────────────────────
 // Change these to swap the video for each funnel
@@ -27,7 +27,7 @@ function Step2() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [ready, setReady] = useState(false);
-  const [callOpen, setCallOpen] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
   const [leadInfo, setLeadInfo] = useState<{ email: string; name?: string; phone?: string; country?: string }>({ email: "" });
   const [watchSeconds, setWatchSeconds] = useState(0);
 
@@ -380,7 +380,7 @@ function Step2() {
 
             {/* Botón primario */}
             <button
-              onClick={() => unlocked && leadInfo.email && setCallOpen(true)}
+              onClick={() => unlocked && leadInfo.email && setVerifyOpen(true)}
               disabled={!unlocked || !leadInfo.email}
               aria-disabled={!unlocked || !leadInfo.email}
               className={`vsl-cta-btn relative inline-flex items-center justify-center gap-2 rounded-xl font-bold uppercase text-center w-full max-w-[520px] transition-all duration-300 ${unlocked ? "cursor-pointer" : "cursor-not-allowed"}`}
@@ -481,13 +481,13 @@ function Step2() {
         </div>
       </footer>
 
-      <NexyCallOverlay
-        open={callOpen}
-        onClose={() => setCallOpen(false)}
-        leadEmail={leadInfo.email}
-        leadName={leadInfo.name}
-        leadPhone={leadInfo.phone}
-        leadCountry={leadInfo.country}
+      <CallLinkVerifyModal
+        open={verifyOpen}
+        onClose={() => setVerifyOpen(false)}
+        initialEmail={leadInfo.email}
+        initialName={leadInfo.name}
+        initialPhone={leadInfo.phone}
+        initialCountry={leadInfo.country}
       />
     </main>
   );

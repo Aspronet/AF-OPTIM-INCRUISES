@@ -2,7 +2,9 @@
 
 import { createAsproFunnel } from "@/lib/af-client";
 import type { TrackStepData } from "@/lib/af-client";
+import { tokenHmacForSession, signToken } from "@/lib/auth-token";
 import { promises as dns } from "dns";
+import crypto from "crypto";
 
 const af = createAsproFunnel({
   apiKey: process.env.AF_API_KEY!,
@@ -462,109 +464,95 @@ export async function getAvailableSlots(
   }
 }
 
-// ─── Retell: Start Web Call ──────────────────────────────
+// ─── Request Call Link (creates session + sends Brevo email) ────
 
-export async function startRetellCall(data: {
+const CALL_NEXFY_URL = process.env.CALL_NEXFY_URL || "https://call.nexfy.io";
+const N8N_CALL_LINK_SENT_URL = process.env.N8N_CALL_LINK_SENT_URL || "";
+
+interface RequestCallLinkInput {
   email: string;
-  name?: string;
-  phone?: string;
+  phone: string;
+  name: string;
   country?: string;
-}): Promise<{ ok: boolean; accessToken?: string; callId?: string; error?: string }> {
-  if (!data.email) return { ok: false, error: "No email" };
+}
 
-  const apiKey = process.env.RETELL_API_KEY;
-  const agentId = process.env.RETELL_AGENT_ID;
-  if (!apiKey || !agentId) {
-    return { ok: false, error: "Retell not configured" };
+export async function requestCallLink(
+  data: RequestCallLinkInput
+): Promise<{ ok: boolean; error?: string }> {
+  const email = data.email.trim().toLowerCase();
+  const phone = data.phone.trim();
+  const name = data.name.trim();
+
+  if (!email || !phone || !name) {
+    return { ok: false, error: "Faltan datos requeridos" };
   }
 
-  const lead = await lookupLead(data.email);
+  // 1. Re-validate email (format + disposable + MX)
+  const emailCheck = await validateEmail(email);
+  if (!emailCheck.valid) {
+    return { ok: false, error: emailCheck.reason || "Email inválido" };
+  }
 
-  // DB is the source of truth. Fall back to client-supplied values only if BD lookup
-  // didn't return that field (rare, e.g. lead just created and replication lag).
-  const resolvedName = (lead.ok && lead.name) || (data.name && data.name.trim()) || "";
-  const resolvedPhone = (lead.ok && lead.phone) || data.phone || "";
-  const resolvedCountry = (lead.ok && lead.country) || data.country || "";
-  const firstName = resolvedName.trim().split(/\s+/)[0] || "";
+  // 2. Lookup lead (for lead_id linkage)
+  const lead = await lookupLead(email);
 
-  if (!firstName) {
-    console.warn("[startRetellCall] No name resolved for", data.email, {
-      clientSent: !!data.name,
-      dbReturned: lead.ok ? !!lead.name : false,
-    });
+  // 3. Create call_session row in Supabase
+  const sessionId = crypto.randomUUID();
+  const tokenHmac = tokenHmacForSession(sessionId);
+  if (!tokenHmac) {
+    console.error("[requestCallLink] CALL_AUTH_SECRET missing");
+    return { ok: false, error: "Servidor no configurado" };
   }
 
   try {
-    const res = await fetch("https://api.retellai.com/v2/create-web-call", {
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/call_sessions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         "Content-Type": "application/json",
+        Prefer: "return=minimal",
       },
       body: JSON.stringify({
-        agent_id: agentId,
-        retell_llm_dynamic_variables: {
-          lead_name: firstName,
-          lead_email: data.email,
-          lead_phone: resolvedPhone,
-          lead_country: resolvedCountry,
-          campaign_id: process.env.AF_CAMPAIGN_ID || "",
-        },
+        id: sessionId,
+        lead_id: lead.ok ? lead.leadId : null,
+        email,
+        phone,
+        name,
+        country: data.country || (lead.ok ? lead.country : null) || null,
+        token_hmac: tokenHmac,
+        status: "link_sent",
+        link_sent_at: new Date().toISOString(),
+        campaign_id: process.env.AF_CAMPAIGN_ID || null,
+        source: "optim_funnel_step2",
         metadata: {
-          lead_id: lead.ok ? lead.leadId : null,
-          lead_email: data.email,
-          source: "funnel_step_2",
+          requested_at: new Date().toISOString(),
         },
       }),
     });
 
-    const json = await res.json();
-    if (!res.ok) {
-      console.error("Retell create-web-call error:", json);
-      return { ok: false, error: json.error || "Failed to start call" };
+    if (!insertRes.ok) {
+      const err = await insertRes.text();
+      console.error("[requestCallLink] insert failed:", err);
+      return { ok: false, error: "No se pudo crear la sesión" };
     }
-
-    if (lead.ok && lead.leadId && lead.userId && json.call_id) {
-      fetch(`${SUPABASE_URL}/rest/v1/lead_activity`, {
-        method: "POST",
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-        },
-        body: JSON.stringify({
-          lead_id: lead.leadId,
-          user_id: lead.userId,
-          action: "retell_call_started",
-          metadata: {
-            call_id: json.call_id,
-            agent_id: agentId,
-            channel: "web",
-          },
-        }),
-      }).catch((e) => console.error("Failed to log retell_call_started:", e));
-
-      trackFunnelStep(data.email, "llamada_filtro").catch(() => {});
-    }
-
-    return { ok: true, accessToken: json.access_token, callId: json.call_id };
   } catch (e) {
-    console.error("startRetellCall error:", e);
-    return { ok: false, error: "Failed to start call" };
+    console.error("[requestCallLink] insert error:", e);
+    return { ok: false, error: "Error al crear la sesión" };
   }
-}
 
-export async function logRetellCallEnded(data: {
-  email: string;
-  callId: string;
-  durationSec: number;
-  outcome?: string;
-}): Promise<{ ok: boolean }> {
-  const lead = await lookupLead(data.email);
-  if (!lead.ok || !lead.leadId || !lead.userId) return { ok: false };
+  const token = signToken(sessionId);
+  const callUrl = `${CALL_NEXFY_URL}/?t=${encodeURIComponent(token)}`;
 
-  fetch(`${SUPABASE_URL}/rest/v1/lead_activity`, {
+  // 4. Send Brevo email (fire-and-forget non-critical, but await main path)
+  const sendRes = await sendCallLinkEmail({ email, name, callUrl });
+  if (!sendRes.ok) {
+    console.error("[requestCallLink] Brevo send failed:", sendRes.error);
+    // Don't block — link still works if email fails (user can be re-emailed)
+  }
+
+  // 5. Log session event
+  fetch(`${SUPABASE_URL}/rest/v1/call_session_events`, {
     method: "POST",
     headers: {
       apikey: SUPABASE_ANON_KEY,
@@ -573,16 +561,144 @@ export async function logRetellCallEnded(data: {
       Prefer: "return=minimal",
     },
     body: JSON.stringify({
-      lead_id: lead.leadId,
-      user_id: lead.userId,
-      action: "retell_call_ended",
-      metadata: {
-        call_id: data.callId,
-        duration_sec: data.durationSec,
-        outcome: data.outcome || "completed",
-      },
+      session_id: sessionId,
+      event_type: "link_sent",
+      metadata: { email_sent: sendRes.ok, error: sendRes.error || null },
     }),
-  }).catch((e) => console.error("Failed to log retell_call_ended:", e));
+  }).catch(() => {});
+
+  // 6. Cross-link to lead_activity
+  if (lead.ok && lead.leadId && lead.userId) {
+    fetch(`${SUPABASE_URL}/rest/v1/lead_activity`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        lead_id: lead.leadId,
+        user_id: lead.userId,
+        action: "call_link_requested",
+        metadata: {
+          call_session_id: sessionId,
+          email_sent: sendRes.ok,
+        },
+      }),
+    }).catch(() => {});
+  }
+
+  // 7. Notify n8n for follow-up sequence
+  if (N8N_CALL_LINK_SENT_URL) {
+    fetch(N8N_CALL_LINK_SENT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: sessionId,
+        email,
+        phone,
+        name,
+        country: data.country,
+        call_url: callUrl,
+        lead_id: lead.ok ? lead.leadId : null,
+      }),
+    }).catch(() => {});
+  }
 
   return { ok: true };
+}
+
+// ─── Brevo: send call-link email ────────────────────────
+
+async function sendCallLinkEmail(opts: {
+  email: string;
+  name: string;
+  callUrl: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return { ok: false, error: "BREVO_API_KEY missing" };
+
+  const senderName = process.env.BREVO_SENDER_NAME || "Nexfy";
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || "hello@nexfy.io";
+  const firstName = opts.name.split(/\s+/)[0] || "";
+
+  const html = callLinkEmailHtml({ firstName, callUrl: opts.callUrl });
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: senderName, email: senderEmail },
+      to: [{ email: opts.email, name: opts.name || opts.email }],
+      subject: "🎙️ Tu link privado para hablar con Nexy",
+      htmlContent: html,
+      tags: ["call-link", "optim"],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    return { ok: false, error: err.message || `Brevo ${res.status}` };
+  }
+  return { ok: true };
+}
+
+function callLinkEmailHtml(opts: { firstName: string; callUrl: string }) {
+  const greeting = opts.firstName ? `Hola ${opts.firstName}` : "Hola";
+  const banner =
+    "https://lzqzymvzgxdgrhghepyy.supabase.co/storage/v1/object/public/recursos/mail%20.png";
+  return `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Tu link para hablar con Nexy</title></head>
+<body style="margin:0; padding:0; background:#0B0D10; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+<div style="display:none; max-height:0; overflow:hidden; font-size:1px; color:#0B0D10;">Tu link privado para una conversación 1:1 con Nexy.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0B0D10;">
+  <tr><td align="center" style="padding:32px 10px;">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background:#12161C; border-radius:16px; overflow:hidden; border:1px solid rgba(74,222,128,0.18); box-shadow:0 20px 60px rgba(0,0,0,0.45);">
+      <tr><td style="padding:0; line-height:0;"><img src="${banner}" alt="Nexfy" width="600" style="display:block; width:100%; height:auto; border:0;"></td></tr>
+      <tr><td style="height:3px; background:linear-gradient(90deg, #4ADE80, #86EFAC, #4ADE80); font-size:0; line-height:0;">&nbsp;</td></tr>
+      <tr><td style="padding:32px 40px 0 40px;">
+        <span style="display:inline-block; padding:6px 12px; border-radius:6px; background:rgba(74,222,128,0.08); border:1px solid rgba(74,222,128,0.3); font-size:11px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:#4ADE80;">🔒 Acceso privado</span>
+      </td></tr>
+      <tr><td style="padding:18px 40px 8px 40px;">
+        <h1 style="margin:0; font-size:28px; font-weight:700; color:#FFFFFF; letter-spacing:-0.5px; line-height:1.2;">${greeting}, ya podés hablar con <span style="color:#4ADE80;">Nexy</span></h1>
+      </td></tr>
+      <tr><td style="padding:8px 40px 24px 40px;">
+        <p style="margin:0; font-size:15px; color:rgba(255,255,255,0.72); line-height:1.6;">Te abrimos una sala privada para que tengas una conversación corta — entre <strong style="color:#fff;">5 y 10 minutos</strong> — con Nexy, nuestro asesor de ventas con IA. Va a evaluar tu contexto y orientarte sobre los próximos pasos.</p>
+      </td></tr>
+      <tr><td style="padding:0 40px 8px 40px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:rgba(74,222,128,0.04); border-radius:12px; border:1px solid rgba(74,222,128,0.18);">
+          <tr><td style="padding:22px 24px;">
+            <p style="margin:0 0 10px 0; font-size:11px; font-weight:700; color:#4ADE80; text-transform:uppercase; letter-spacing:1.4px;">Antes de comenzar</p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr><td valign="top" style="padding:6px 0; font-size:14px; color:#4ADE80; font-weight:700; width:24px;">→</td><td style="padding:6px 0; font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55;">Buscá un lugar tranquilo</td></tr>
+              <tr><td valign="top" style="padding:6px 0; font-size:14px; color:#4ADE80; font-weight:700; width:24px;">→</td><td style="padding:6px 0; font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55;">Asegurate de tener auriculares o buen micrófono</td></tr>
+              <tr><td valign="top" style="padding:6px 0; font-size:14px; color:#4ADE80; font-weight:700; width:24px;">→</td><td style="padding:6px 0; font-size:14px; color:rgba(255,255,255,0.85); line-height:1.55;">Hablá natural — Nexy responde como una persona</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:24px 40px 8px 40px; text-align:center;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+          <tr><td style="border-radius:12px; background:#4ADE80;">
+            <a href="${opts.callUrl}" target="_blank" style="display:inline-block; padding:18px 56px; font-size:14px; font-weight:700; color:#0B0D10; text-decoration:none; letter-spacing:1px; text-transform:uppercase;">🎙️ Hablar con Nexy</a>
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:8px 40px 24px 40px; text-align:center;">
+        <p style="margin:0; font-size:12px; color:rgba(255,255,255,0.4); line-height:1.6;">El link es personal — vinculado a este email.<br>Vence en 14 días, pero podés volver a usarlo cuando quieras dentro de ese plazo.</p>
+      </td></tr>
+      <tr><td style="padding:0 40px;"><div style="height:1px; background:rgba(255,255,255,0.06);">&nbsp;</div></td></tr>
+      <tr><td style="padding:20px 40px 28px 40px; text-align:center;">
+        <p style="margin:0 0 6px 0; font-size:12px; color:rgba(255,255,255,0.45); font-weight:600;">Nexfy &mdash; Sistemas de Ventas con IA</p>
+        <p style="margin:0; font-size:11px; color:rgba(255,255,255,0.25); line-height:1.6;">¿No solicitaste este link? Ignorá este email.<br>&copy; ${new Date().getFullYear()} Nexfy</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
 }
