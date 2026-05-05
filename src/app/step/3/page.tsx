@@ -224,18 +224,35 @@ type Question = {
 const QUESTIONS: Question[] = [
   { id: 1, text: "¿Cuál es tu nombre completo?", type: "text", placeholder: "Escribe tu nombre completo" },
   { id: 2, text: "¿En qué país te encuentras?", type: "country" },
-  { id: 3, text: "¿Cuál describe mejor tu situación actual?", type: "cards", options: ["Empleado a tiempo completo", "Empleado medio tiempo", "Emprendedor o freelancer", "Dueño de negocio", "Estudiante", "Otro"] },
-  { id: 4, text: "¿Alguna vez intentaste otro tipo de negocio por tu cuenta? (ecommerce, dropshipping, freelancing, ventas, etc.)", type: "cards", options: ["Sí, y me fue bien — busco algo mejor o complementario", "Sí, pero no me funcionó — me faltó sistema o guía", "Sí, pero lo dejé por falta de tiempo o capital", "No, esta sería mi primera vez"] },
-  { id: 5, text: "¿Qué fue lo que más te llamó la atención del video?", type: "cards", options: ["La oportunidad de generar ingresos en dólares", "El sistema de ventas comprobado que te guía paso a paso", "La posibilidad de hacerlo part-time sin dejar mi trabajo", "La industria y el respaldo de la empresa", "Todavía tengo dudas pero quiero entender mejor"] },
-  { id: 6, text: "¿Cuánto tiempo podrías dedicar a un proyecto nuevo fuera de tu actividad actual?", type: "cards", options: ["Menos de 1 hora al día — pero soy constante", "1 a 2 horas al día", "Más de 2 horas al día", "Podría dedicarme full-time si vale la pena"] },
-  { id: 7, text: "Si después de la llamada vemos que este negocio encaja con tu perfil, ¿estás en posición de tomar una decisión e invertir en ti mismo para empezar?", type: "cards", options: ["Sí, estoy listo para empezar si tiene sentido", "Muy probablemente sí, quiero ver los detalles finales", "Depende de la inversión — necesito saber cuánto es", "Solo estoy explorando por ahora"] },
+  { id: 3, text: "¿Cuál de estas opciones te describe mejor hoy?", type: "cards", options: [
+      "Tengo un negocio de servicios y quiero vender más",
+      "Trabajo en marketing digital, ventas o tecnología",
+      "Tengo empleo en otra área y busco una habilidad nueva con salida real",
+      "Estoy empezando desde cero",
+    ] },
+  { id: 4, text: "¿Dónde te gustaría aplicar lo que aprendas en la Certificación?", type: "cards", options: [
+      "En mi propio negocio para vender más",
+      "Ofrecer este servicio a otros negocios como profesional independiente",
+      "Operar dentro del ecosistema comercial de Nexfy",
+      "Todavía no estoy seguro",
+    ] },
+  { id: 5, text: "¿Qué es lo que más te interesa lograr con esto?", type: "cards", options: [
+      "Generar una nueva fuente de ingresos",
+      "Mejorar las ventas de mi negocio actual",
+      "Dejar de depender de un empleo tradicional",
+      "Aprender una habilidad con demanda real en el mercado",
+      "Todavía no estoy seguro",
+    ] },
 ];
+
+// Stable keys for the JSONB `answers` payload — change with care, downstream
+// dashboards/exports key off these.
+const ANSWER_KEYS = ["nombre_completo", "pais", "perfil", "aplicar", "objetivo"] as const;
 
 // Wizard stages — group questions to reduce form fatigue
 const STAGES: { title: string; subtitle: string; indices: number[] }[] = [
   { title: "Sobre ti", subtitle: "Empezamos con lo básico", indices: [0, 1] },
-  { title: "Tu situación", subtitle: "Para entender tu contexto", indices: [2, 3] },
-  { title: "Tu interés", subtitle: "Última parte antes de agendar", indices: [4, 5, 6] },
+  { title: "Tu camino", subtitle: "Última parte antes de agendar", indices: [2, 3, 4] },
 ];
 
 // ── Phase type ──
@@ -475,16 +492,17 @@ export default function Step3() {
     const ownerId = localStorage.getItem("af_owner_id");
     const campaignId = localStorage.getItem("af_campaign_id");
     if (email) {
-      const payload: Record<string, string> = { lead_email: email };
+      const answersJson: Record<string, string> = {};
+      ANSWER_KEYS.forEach((key, i) => {
+        const a = answers[i];
+        if (a) answersJson[key] = a;
+      });
+      const payload: Record<string, unknown> = {
+        lead_email: email,
+        answers: answersJson,
+      };
       if (ownerId) payload.owner_id = ownerId;
       if (campaignId) payload.campaign_id = campaignId;
-      if (answers[0]) payload.q1_nombre_completo = answers[0];
-      if (answers[1]) payload.q2_pais = answers[1];
-      if (answers[2]) payload.q3_situacion_actual = answers[2];
-      if (answers[3]) payload.q4_experiencia_negocios = answers[3];
-      if (answers[4]) payload.q5_atencion_video = answers[4];
-      if (answers[5]) payload.q6_tiempo_disponible = answers[5];
-      if (answers[6]) payload.q7_disposicion_inversion = answers[6];
       fetch(`${SUPABASE_URL}/rest/v1/lead_filter_answers`, {
         method: "POST",
         headers: {
