@@ -609,6 +609,126 @@ export async function requestCallLink(
   return { ok: true };
 }
 
+// ─── Nexy Booking (Step 3 → nexy_bookings) ──────────────
+
+const N8N_NEXY_BOOKING_URL = process.env.N8N_NEXY_BOOKING_URL || "";
+
+interface ConfirmNexyBookingInput {
+  email: string;
+  name: string;
+  phone?: string;
+  country?: string;
+  scheduledAt: string;            // ISO UTC
+  timezone: string;               // IANA
+  durationMin?: number;
+  answers?: Record<string, string>;
+  notes?: string;
+  campaignId?: string;
+}
+
+export async function confirmNexyBooking(
+  data: ConfirmNexyBookingInput
+): Promise<{ ok: boolean; bookingId?: string; error?: string }> {
+  const email = data.email.trim().toLowerCase();
+  if (!email || !data.scheduledAt || !data.timezone) {
+    return { ok: false, error: "Faltan datos requeridos" };
+  }
+
+  // Sanity: must be in the future
+  if (new Date(data.scheduledAt).getTime() <= Date.now()) {
+    return { ok: false, error: "El horario elegido ya pasó" };
+  }
+
+  const lead = await lookupLead(email);
+  const bookingId = crypto.randomUUID();
+
+  try {
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/nexy_bookings`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        id: bookingId,
+        lead_id: lead.ok ? lead.leadId : null,
+        email,
+        phone: data.phone || (lead.ok ? lead.phone : null) || null,
+        name: data.name || (lead.ok ? lead.name : null) || null,
+        country: data.country || (lead.ok ? lead.country : null) || null,
+        scheduled_at: data.scheduledAt,
+        timezone: data.timezone,
+        duration_min: data.durationMin || 7,
+        status: "pending",
+        answers: data.answers || {},
+        notes: data.notes || null,
+        campaign_id: data.campaignId || process.env.AF_CAMPAIGN_ID || null,
+        source: "optim_funnel_step3",
+        metadata: {
+          created_via: "step3_form",
+          user_agent_tz: data.timezone,
+        },
+      }),
+    });
+
+    if (!insertRes.ok) {
+      const err = await insertRes.text();
+      console.error("[confirmNexyBooking] insert failed:", err);
+      return { ok: false, error: "No se pudo guardar la reserva" };
+    }
+  } catch (e) {
+    console.error("[confirmNexyBooking] insert error:", e);
+    return { ok: false, error: "Error al guardar la reserva" };
+  }
+
+  // Cross-link to lead_activity (fire-and-forget)
+  if (lead.ok && lead.leadId && lead.userId) {
+    fetch(`${SUPABASE_URL}/rest/v1/lead_activity`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        lead_id: lead.leadId,
+        user_id: lead.userId,
+        action: "nexy_booking_created",
+        metadata: {
+          nexy_booking_id: bookingId,
+          scheduled_at: data.scheduledAt,
+          timezone: data.timezone,
+        },
+      }),
+    }).catch(() => {});
+  }
+
+  // Notify n8n for batch-call orchestration
+  if (N8N_NEXY_BOOKING_URL) {
+    fetch(N8N_NEXY_BOOKING_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        booking_id: bookingId,
+        lead_id: lead.ok ? lead.leadId : null,
+        email,
+        phone: data.phone || (lead.ok ? lead.phone : null),
+        name: data.name || (lead.ok ? lead.name : null),
+        country: data.country || (lead.ok ? lead.country : null),
+        scheduled_at: data.scheduledAt,
+        timezone: data.timezone,
+        duration_min: data.durationMin || 7,
+        answers: data.answers || {},
+      }),
+    }).catch(() => {});
+  }
+
+  return { ok: true, bookingId };
+}
+
 // ─── Brevo: send call-link email ────────────────────────
 
 async function sendCallLinkEmail(opts: {

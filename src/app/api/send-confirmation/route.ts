@@ -214,15 +214,15 @@ function meetingScheduledHtml(opts: {
   portalUrl: string;
 }) {
   return baseTemplate({
-    preheader: `Tu reunión con ${opts.coachName} fue agendada para el ${opts.dateStr} a las ${opts.timeStr}.`,
-    title: `&#128222; Reuni&oacute;n confirmada`,
-    subtitle: `Tu llamada de presentaci&oacute;n fue agendada exitosamente.`,
+    preheader: `Nexy te va a llamar el ${opts.dateStr} a las ${opts.timeStr} para tu evaluación de perfil.`,
+    title: `&#127897;&#65039; Reuni&oacute;n con ${opts.coachName} confirmada`,
+    subtitle: `Tu evaluaci&oacute;n con nuestro asesor IA fue agendada para el ${opts.dateStr} a las ${opts.timeStr}.`,
     bodyHtml: `
             <p style="margin:0; font-size:15px; color:#374151; line-height:1.7;">
               Hola ${opts.leadName || ""} &#128075;
             </p>
             <p style="margin:14px 0 0 0; font-size:15px; color:#374151; line-height:1.7;">
-              Tu reuni&oacute;n con <strong style="color:#16A34A;">${opts.coachName}</strong> fue agendada. Ac&aacute; est&aacute;n los detalles:
+              Tu evaluaci&oacute;n con <strong style="color:#16A34A;">${opts.coachName}</strong>, nuestro asesor de IA, fue agendada. Ac&aacute; est&aacute;n los detalles:
             </p>
           </td>
         </tr>
@@ -232,11 +232,11 @@ function meetingScheduledHtml(opts: {
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F0FDF4; border-radius:12px; border:1px solid #DCFCE7;">
               <tr>
                 <td style="padding:24px;">
-                  <p style="margin:0 0 16px 0; font-size:11px; font-weight:700; color:#16A34A; text-transform:uppercase; letter-spacing:1.4px;">Detalles de la reuni&oacute;n</p>
+                  <p style="margin:0 0 16px 0; font-size:11px; font-weight:700; color:#16A34A; text-transform:uppercase; letter-spacing:1.4px;">Detalles de la evaluaci&oacute;n</p>
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
                       <td style="padding:6px 0; font-size:14px; color:#6B7280; width:100px;">Tipo:</td>
-                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:600;">Llamada de Presentaci&oacute;n</td>
+                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:600;">Evaluaci&oacute;n de perfil con ${opts.coachName}</td>
                     </tr>
                     <tr>
                       <td style="padding:6px 0; font-size:14px; color:#6B7280; width:100px;">Fecha:</td>
@@ -248,12 +248,25 @@ function meetingScheduledHtml(opts: {
                     </tr>
                     <tr>
                       <td style="padding:6px 0; font-size:14px; color:#6B7280; width:100px;">Con:</td>
-                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:600;">${opts.coachName}</td>
+                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:600;">${opts.coachName} &middot; Asesor IA</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:6px 0; font-size:14px; color:#6B7280; width:100px;">Modalidad:</td>
+                      <td style="padding:6px 0; font-size:14px; color:#1A1A2E; font-weight:600;">Llamada por audio (5 a 7 min)</td>
                     </tr>
                   </table>
                 </td>
               </tr>
             </table>
+          </td>
+        </tr>
+
+        <!-- Cómo funciona la llamada -->
+        <tr>
+          <td style="padding:18px 40px 0 40px;">
+            <p style="margin:0; font-size:13px; color:#6B7280; line-height:1.65;">
+              <strong style="color:#1A1A2E;">${opts.coachName}</strong> te va a llamar al tel&eacute;fono que cargaste en el formulario el d&iacute;a y horario que elegiste. La conversaci&oacute;n dura entre 5 y 7 minutos &mdash; es un filtro real para ver si tu perfil encaja con la Certificaci&oacute;n.
+            </p>
           </td>
         </tr>
 
@@ -270,7 +283,7 @@ function meetingScheduledHtml(opts: {
         <tr>
           <td style="padding:24px 40px 0 40px;">
             <p style="margin:0 0 14px 0; font-size:14px; color:#374151; line-height:1.6;">
-              <strong style="color:#1A1A2E;">Mientras esper&aacute;s</strong>, conoc&eacute; el portal de la Certificaci&oacute;n. Estos son los 4 pasos que vas a hacer una vez que tu perfil quede aprobado en la llamada con Nexy:
+              <strong style="color:#1A1A2E;">Mientras esper&aacute;s</strong>, conoc&eacute; el portal de la Certificaci&oacute;n. Estos son los 4 pasos que vas a hacer una vez que tu perfil quede aprobado en la llamada con ${opts.coachName}:
             </p>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F0FDF4; border-radius:12px; border:1px solid #DCFCE7;">
               <tr>
@@ -321,22 +334,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Missing fields" }, { status: 400 });
     }
 
+    const coachName = host || "Nexy";
     const gcalUrl = rawDate ? buildGoogleCalendarUrl({
-      title: `Llamada de Presentación - ${host || "Nexfy"}`,
+      title: `Evaluación con ${coachName} (Nexfy)`,
       rawDate,
       time,
-      duration: duration || 15,
-      host: host || "Tu asesor",
+      duration: duration || 7,
+      host: coachName,
       timezone: timezone || "America/Argentina/Buenos_Aires",
     }) : "";
 
     const portalBase = process.env.PORTAL_URL || "https://portal.nexfy.io";
     const portalUrl = `${portalBase}/?ref=${encodeURIComponent(email)}`;
 
-    const subject = `Reunión confirmada - Llamada de Presentación | Nexfy`;
+    const subject = `🎙️ Tu evaluación con ${coachName} está agendada · Nexfy`;
     const htmlContent = meetingScheduledHtml({
       leadName: name || "",
-      coachName: host || "Tu asesor",
+      coachName,
       dateStr: date,
       timeStr: `${time}${duration ? ` (${duration} min)` : ""}`,
       gcalUrl,

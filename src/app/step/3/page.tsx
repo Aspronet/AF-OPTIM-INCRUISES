@@ -1,7 +1,24 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { trackFunnelStep } from "@/app/actions";
+import { trackFunnelStep, confirmNexyBooking } from "@/app/actions";
+
+// ── Nexy availability config ──
+// Lun-Vie, 06:00 a 21:00 cada hora (en TZ del lead). Hora 22 excluida
+// para evitar que la llamada se pase del límite del día. Cambiar
+// NEXY_HOUR_START/END acá si marketing pide ajustar la ventana.
+const NEXY_HOST_NAME = "Nexy";
+const NEXY_DURATION_MIN = 7;
+const NEXY_AVAILABLE_DAYS = new Set([1, 2, 3, 4, 5]); // Mon-Fri (JS day-of-week, 0=Sun)
+const NEXY_HOUR_START = 6;
+const NEXY_HOUR_END = 22; // exclusive
+const NEXY_BOOKING_BUFFER_MS = 60 * 60 * 1000; // no permitir bookings dentro de la próxima hora
+const NEXY_MAX_LOOKAHEAD_DAYS = 14;
+
+const NEXY_BASE_SLOTS = Array.from({ length: NEXY_HOUR_END - NEXY_HOUR_START }, (_, i) => {
+  const h = NEXY_HOUR_START + i;
+  return `${String(h).padStart(2, "0")}:00`;
+});
 
 // ── Helpers ──
 
@@ -280,13 +297,13 @@ export default function Step3() {
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  // Booking
-  const [slug, setSlug] = useState<string | null>(null);
-  const [hostName, setHostName] = useState("");
-  const [durationMin, setDurationMin] = useState(15);
-  const [availableDaysOfWeek, setAvailableDaysOfWeek] = useState<Set<number>>(new Set());
+  // Booking — Nexy es AI, no hay slug ni asesor humano
+  const hostName = NEXY_HOST_NAME;
+  const durationMin = NEXY_DURATION_MIN;
+  const availableDaysOfWeek = NEXY_AVAILABLE_DAYS;
   const [leadName, setLeadName] = useState("");
   const [leadPhone, setLeadPhone] = useState("");
+  const [leadCountry, setLeadCountry] = useState("");
   const [slots, setSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
@@ -331,148 +348,151 @@ export default function Step3() {
     if (countryOpen) countrySearchRef.current?.focus();
   }, [countryOpen]);
 
-  // ── Load booking info ──
+  // ── Hydrate lead context (sólo nombre/teléfono/país, no asesor) ──
   useEffect(() => {
     (async () => {
       try {
         const email = localStorage.getItem("af_lead_email");
-        const storedOwnerId = localStorage.getItem("af_owner_id");
-        console.log("[Step3] email:", email, "storedOwnerId:", storedOwnerId);
-        if (!email) { console.log("[Step3] No email, aborting"); setInitialLoading(false); return; }
+        if (!email) { setInitialLoading(false); return; }
 
-        // Always fetch fresh from DB — filter by campaign_id if available
         const campaignId = localStorage.getItem("af_campaign_id");
         const campaignFilter = campaignId ? `&campaign_id=eq.${campaignId}` : "";
         const leadRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(email)}${campaignFilter}&select=user_id,name,phone&order=created_at.desc&limit=1`,
+          `${SUPABASE_URL}/rest/v1/leads?email=eq.${encodeURIComponent(email)}${campaignFilter}&select=name,phone,country&order=created_at.desc&limit=1`,
           { headers }
         );
         const leads = await leadRes.json();
-        console.log("[Step3] leads query result:", leads, "campaignFilter:", campaignFilter);
-
-        // DB result is authoritative; fall back to localStorage only if DB returns nothing
-        let ownerId: string | null = null;
-        if (leads?.[0]?.user_id) {
-          ownerId = leads[0].user_id as string;
-          // Update localStorage to stay in sync
-          localStorage.setItem("af_owner_id", ownerId);
-          if (leads[0].name) { setLeadName(leads[0].name); setAnswers((prev) => ({ ...prev, 0: leads[0].name })); }
+        if (leads?.[0]) {
+          if (leads[0].name) {
+            setLeadName(leads[0].name);
+            setAnswers((prev) => ({ ...prev, 0: leads[0].name }));
+          }
           if (leads[0].phone) setLeadPhone(leads[0].phone);
-        } else if (storedOwnerId) {
-          // Fallback: use localStorage if DB didn't return a result
-          ownerId = storedOwnerId;
-          console.log("[Step3] DB returned no lead, falling back to storedOwnerId:", storedOwnerId);
+          if (leads[0].country) setLeadCountry(leads[0].country);
         }
-
-        if (!ownerId) { console.log("[Step3] No ownerId found, aborting"); setInitialLoading(false); return; }
-        console.log("[Step3] Using ownerId:", ownerId);
-
-        // Get the 15-min booking link for the owner
-        const linkRes = await fetch(`${SUPABASE_URL}/rest/v1/booking_links?user_id=eq.${ownerId}&is_active=eq.true&duration_minutes=eq.15&select=slug,duration_minutes,user_id`, { headers });
-        const links = await linkRes.json();
-        console.log("[Step3] booking_links result:", links);
-        if (!links?.[0]) { console.log("[Step3] No booking link found for owner, aborting"); setInitialLoading(false); return; }
-        const link = links[0];
-        setSlug(link.slug);
-        if (link.duration_minutes) setDurationMin(link.duration_minutes);
-
-        // Get host name
-        const profRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?id=eq.${ownerId}&select=first_name,last_name`, { headers });
-        const profs = await profRes.json();
-        console.log("[Step3] user_profiles result:", profs);
-        if (profs?.[0]) setHostName(`${profs[0].first_name || ""} ${profs[0].last_name || ""}`.trim());
-
-        // Get which days of week have availability
-        const schedRes = await fetch(`${SUPABASE_URL}/rest/v1/availability_schedules?user_id=eq.${ownerId}&is_active=eq.true&select=day_of_week`, { headers });
-        const scheds = await schedRes.json();
-        console.log("[Step3] availability_schedules result:", scheds);
-        if (Array.isArray(scheds)) {
-          const jsDays = new Set(scheds.map((s: { day_of_week: number }) => (s.day_of_week === 6 ? 0 : s.day_of_week + 1)));
-          console.log("[Step3] Available JS days:", [...jsDays]);
-          setAvailableDaysOfWeek(jsDays);
-        }
-
-        console.log("[Step3] Fetching slots for today with slug:", link.slug);
-        fetchSlots(today, link.slug);
-      } catch (e) { console.error("[Step3] Init error:", e); }
+      } catch (e) {
+        console.error("[Step3] Init error:", e);
+      }
       setInitialLoading(false);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Fetch slots ──
-  const slugRef = useRef(slug);
-  slugRef.current = slug;
+  // ── Slot generator (Nexy = AI, lun-vie 06-22h en TZ del lead) ──
+  function generateSlots(date: Date): string[] {
+    const isToday = sameDay(date, today);
+    if (!isToday) return [...NEXY_BASE_SLOTS];
+    const cutoff = Date.now() + NEXY_BOOKING_BUFFER_MS;
+    return NEXY_BASE_SLOTS.filter((slot) => {
+      const [h, m] = slot.split(":").map(Number);
+      const slotMs = new Date(date.getFullYear(), date.getMonth(), date.getDate(), h, m, 0, 0).getTime();
+      return slotMs > cutoff;
+    });
+  }
 
-  async function fetchSlots(date: Date, overrideSlug?: string) {
-    const s = overrideSlug || slugRef.current;
-    if (!s) return;
-    setSlotsLoading(true); setSlots([]); setSelectedSlot(null);
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/booking-availability?slug=${encodeURIComponent(s)}&date=${dateStr}&timezone=${encodeURIComponent(tz)}`);
-      const data = await res.json();
-      if (res.ok && data.slots) { setSlots(data.slots); if (data.host) setHostName(data.host); }
-    } catch (e) { console.error("Failed to fetch slots:", e); }
+  function loadSlots(date: Date) {
+    setSlotsLoading(true);
+    setSelectedSlot(null);
+    const next = generateSlots(date);
+    setSlots(next);
     setSlotsLoading(false);
   }
 
-  const handleDateSelect = (date: Date) => { if (date < today && !sameDay(date, today)) return; setSelectedDate(date); fetchSlots(date); };
+  const handleDateSelect = (date: Date) => {
+    if (date < today && !sameDay(date, today)) return;
+    setSelectedDate(date);
+    loadSlots(date);
+  };
 
   const handleConfirm = async () => {
-    if (!selectedDate || !selectedSlot || !slugRef.current) return;
+    if (!selectedDate || !selectedSlot) return;
     setConfirming(true);
     setBookingError("");
-    const email = localStorage.getItem("af_lead_email");
+
+    const email = localStorage.getItem("af_lead_email") || "";
+    const campaignId = localStorage.getItem("af_campaign_id") || undefined;
     const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
+
+    // Build scheduled_at from local picker → UTC ISO
+    const [h, m] = selectedSlot.split(":").map(Number);
+    const localDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), h, m, 0, 0);
+    const scheduledAtUtc = localDate.toISOString();
+
+    if (!email) {
+      setBookingError("No encontramos tu email. Volvé al paso 1 y completá tus datos.");
+      setConfirming(false);
+      return;
+    }
+
+    // JSONB answers payload (mismas keys que lead_filter_answers)
+    const answersJson: Record<string, string> = {};
+    ANSWER_KEYS.forEach((key, i) => {
+      const a = answers[i];
+      if (a) answersJson[key] = a;
+    });
     const notesLines = QUESTIONS.map((q, i) => `${q.text}\n→ ${answers[i] || "Sin respuesta"}`);
+
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/booking-confirm`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: slugRef.current, date: dateStr, time: selectedSlot, name: leadName || answers[0] || "Lead", email: email || "", phone: leadPhone || null, timezone: leadTimezone, notes: notesLines.join("\n\n") }),
+      const res = await confirmNexyBooking({
+        email,
+        name: leadName || answers[0] || "Lead",
+        phone: leadPhone || undefined,
+        country: leadCountry || answers[1] || undefined,
+        scheduledAt: scheduledAtUtc,
+        timezone: leadTimezone,
+        durationMin: NEXY_DURATION_MIN,
+        answers: answersJson,
+        notes: notesLines.join("\n\n"),
+        campaignId,
       });
       if (!res.ok) {
-        const err = await res.json();
-        console.error("Booking confirm error:", err);
-        setBookingError(res.status === 409
-          ? "Este horario ya no está disponible. Elige otro."
-          : "Error al confirmar. Intenta de nuevo.");
+        setBookingError(res.error || "Error al confirmar. Intenta de nuevo.");
         setConfirming(false);
-        // Refresh slots so the taken one disappears
-        fetchSlots(selectedDate);
+        loadSlots(selectedDate);
         return;
       }
-    } catch (e) { console.error("Booking confirm failed:", e); setBookingError("Error de conexión. Intenta de nuevo."); setConfirming(false); return; }
-    if (email) await trackFunnelStep(email, "confirmar_cita");
-    const bookingData = { date: formatDate(selectedDate), rawDate: dateStr, time: selectedSlot, host: hostName, duration: durationMin, timezone: leadTimezone };
+    } catch (e) {
+      console.error("confirmNexyBooking failed:", e);
+      setBookingError("Error de conexión. Intenta de nuevo.");
+      setConfirming(false);
+      return;
+    }
+
+    await trackFunnelStep(email, "confirmar_cita");
+
+    const bookingData = {
+      date: formatDate(selectedDate),
+      rawDate: dateStr,
+      time: selectedSlot,
+      host: hostName,
+      duration: durationMin,
+      timezone: leadTimezone,
+    };
     localStorage.setItem("af_booking", JSON.stringify(bookingData));
     localStorage.setItem("af_filter_answers", JSON.stringify(answers));
 
     // Send confirmation email (fire-and-forget)
-    if (email) {
-      fetch("/api/send-confirmation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          name: leadName || answers[0] || "",
-          date: bookingData.date,
-          rawDate: dateStr,
-          time: bookingData.time,
-          host: bookingData.host,
-          duration: bookingData.duration,
-          timezone: bookingData.timezone,
-        }),
-      }).catch((e) => console.error("Failed to send confirmation email:", e));
-    }
+    fetch("/api/send-confirmation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        name: leadName || answers[0] || "",
+        date: bookingData.date,
+        rawDate: dateStr,
+        time: bookingData.time,
+        host: bookingData.host,
+        duration: bookingData.duration,
+        timezone: bookingData.timezone,
+      }),
+    }).catch((e) => console.error("Failed to send confirmation email:", e));
 
     setConfirmedBooking(bookingData);
     setPhase("confirmed");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const maxBookingDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 5);
+  const maxBookingDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + NEXY_MAX_LOOKAHEAD_DAYS);
   const prevMonth = () => { if (viewMonth === 0) { setViewYear((y) => y - 1); setViewMonth(11); } else setViewMonth((m) => m - 1); };
   const canGoNext = new Date(viewYear, viewMonth + 1, 1) <= maxBookingDate;
   const nextMonth = () => { if (!canGoNext) return; if (viewMonth === 11) { setViewYear((y) => y + 1); setViewMonth(0); } else setViewMonth((m) => m + 1); };
@@ -891,14 +911,25 @@ export default function Step3() {
                   <div className="flex flex-col md:flex-row">
                     {/* Left panel */}
                     <div className="flex flex-col gap-3 sm:gap-4 md:w-56 shrink-0 p-4 sm:p-5 md:p-6 border-b md:border-b-0 md:border-r" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
-                      {hostName && (
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold" style={{ background: "linear-gradient(135deg, #4ADE80, #86EFAC)", color: "#0B0D10" }}>
-                            {hostName.split(" ").map((w) => w[0]?.toUpperCase() || "").join("").slice(0, 2)}
-                          </div>
-                          <div className="flex flex-col"><span className="text-[13px] font-medium text-white">{hostName}</span><span className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>Tu asesor</span></div>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="flex h-9 w-9 items-center justify-center rounded-full"
+                          style={{
+                            background: "radial-gradient(circle at 30% 28%, rgba(74,222,128,0.7), rgba(74,222,128,0.18) 70%)",
+                            border: "1px solid rgba(74,222,128,0.55)",
+                            color: "#0B0D10",
+                            boxShadow: "0 0 16px rgba(74,222,128,0.35)",
+                          }}
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
+                          </svg>
                         </div>
-                      )}
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-medium text-white">{hostName}</span>
+                          <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>Asesor IA · Llamada por audio</span>
+                        </div>
+                      </div>
                       <div className="flex flex-col gap-2 pt-1 text-[12px]" style={{ color: "rgba(255,255,255,0.4)" }}>
                         <div className="flex items-center gap-2"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span>{durationMin} min</span></div>
                         <div className="flex items-center gap-2"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" /></svg><span>{leadTimezone.replace(/_/g, " ")}</span></div>
@@ -925,8 +956,7 @@ export default function Step3() {
                             {calendarDays.map((day) => {
                               const isCurrentMonth = day.getMonth() === viewMonth;
                               const isPast = day < today && !sameDay(day, today);
-                              const maxDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 5);
-                              const isTooFar = day > maxDate;
+                              const isTooFar = day > maxBookingDate;
                               const isToday = sameDay(day, today);
                               const isSelected = selectedDate ? sameDay(day, selectedDate) : false;
                               const hasAvailability = availableDaysOfWeek.size === 0 || availableDaysOfWeek.has(day.getDay());
